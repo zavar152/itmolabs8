@@ -1,0 +1,4 @@
+id;name;coordinates;creationDate;studentsCount;expelledStudents;transferredStudents;formOfEducation;groupAdmin
+1;T3132;x=4.0, y=5.0;2021-02-21;2;3;4;DISTANCE_EDUCATION;name=Chelik, passportID=1234, eyeColor=GREEN, hairColor=BLACK, nationality=USA, locationX=1.0, locationY=2.0, locationZ=3, locationName=ITMO
+3;3132;x=2.0, y=4.0;2021-02-16;7;1;3;FULL_TIME_EDUCATION;
+4;P3133;x=1.0, y=2.0;2021-02-17;3;4;5;EVENING_CLASSES;
