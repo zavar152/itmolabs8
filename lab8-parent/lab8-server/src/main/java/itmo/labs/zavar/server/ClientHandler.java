@@ -3,6 +3,7 @@ package itmo.labs.zavar.server;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousSocketChannel;
+import java.util.ArrayList;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -22,7 +23,9 @@ public class ClientHandler implements Callable<String> {
 	private ExecutorService clientExecutor;
 	private ForkJoinPool clientWriter;
 	private Logger logger = LogManager.getLogger(ClientHandler.class.getName());
-
+	private ArrayList<Object> outputs = new ArrayList<Object>();
+	private String login, host;
+	
 	public ClientHandler(AsynchronousSocketChannel asyncChannel, Environment clientEnv, ExecutorService clientExecutor, ForkJoinPool clientWriter) {
 		this.asyncChannel = asyncChannel;
 		this.clientEnv = clientEnv;
@@ -32,30 +35,26 @@ public class ClientHandler implements Callable<String> {
 
 	@Override
 	public String call() throws Exception {
-		String host = asyncChannel.getRemoteAddress().toString().replace("/", "");
+		host = asyncChannel.getRemoteAddress().toString().replace("/", "");
 		logger.info("Incoming connection from: " + host);
 
 		final ByteBuffer buffer = ByteBuffer.wrap(new byte[4096 * 4]);
 
 		while (asyncChannel.read(buffer).get() != -1) {
 			try {
-
 				CommandPackage per = ClientReader.read(buffer);
+				login = per.getLogin();
 				logger.info("Command from " + host + (per.getLogin() != null ? " (user - " + per.getLogin() + "): " : ": ") + per.getName());
 				
 				Future<ByteBuffer> futureOutBuffer = clientExecutor.submit(() -> {
 					return ClientCommandExecutor.executeCommand(per, clientEnv, host);
 				});
 
+				login = clientEnv.getUser(host);
+				
 				ByteBuffer outBuffer = futureOutBuffer.get();
 				
-				clientWriter.submit(() -> {
-					try {
-						ClientWriter.write(asyncChannel, outBuffer, per.getLogin());
-					} catch (InterruptedException | ExecutionException | IOException e) {
-						logger.error("Error while writing output to " + host);
-					}
-				});
+				writeToClient(outBuffer);
 				
 				logger.info("Send command's output to " + host);
 				
@@ -71,6 +70,34 @@ public class ClientHandler implements Callable<String> {
 		asyncChannel.close();
 		clientEnv.removeUser(host);
 		logger.info("Client " + host + " was successfully served");
+		return host;
+	}
+	
+	public boolean isOpen() {
+		return asyncChannel.isOpen();
+	}
+	
+	public void addOutput(Object buf) {
+		outputs.add(buf);
+	}
+	
+	public synchronized void writeToClient(ByteBuffer outBuffer) {
+		clientWriter.submit(() -> {
+			try {
+				ClientWriter.write(asyncChannel, outBuffer, login, outputs.toArray());
+			} catch (InterruptedException | ExecutionException | IOException e) {
+				e.printStackTrace();
+				logger.error("Error while writing output to " + host);
+			}
+			outputs.clear();
+		});
+	}
+	
+	public String getLogin() {
+		return login;
+	}
+	
+	public String getHost() {
 		return host;
 	}
 }

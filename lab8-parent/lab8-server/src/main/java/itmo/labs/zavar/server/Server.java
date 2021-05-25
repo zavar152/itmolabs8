@@ -5,6 +5,8 @@ import java.net.InetSocketAddress;
 import java.net.StandardSocketOptions;
 import java.nio.channels.AsynchronousServerSocketChannel;
 import java.nio.channels.AsynchronousSocketChannel;
+import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Scanner;
@@ -50,6 +52,8 @@ public class Server {
 	
 	private static final Logger rootLogger = LogManager.getLogger(Server.class.getName());
 	
+	private static DataBaseManager db;
+	
 	public static void main(String[] args) {
 		
 		if(args.length != 2)
@@ -58,14 +62,17 @@ public class Server {
 			System.exit(0);
 		}
 		
-		Environment[] envs = prepareEnvironments(args[1]);
+		db = new DataBaseManager(args[1], "s314935", "", "se.ifmo.ru", "studs", 2222, "pg", 2220, 5432);
+		Environment[] envs = prepareEnvironments(db);
 		Environment clientEnv = envs[0];
 		Environment internalEnv = envs[1];
 		
-		ExecutorService intClientExecutor = Executors.newFixedThreadPool(1);
+		ExecutorService internalServicesExecutor = Executors.newFixedThreadPool(2);
 		ForkJoinPool clientReader = ForkJoinPool.commonPool();
 		ExecutorService clientExecutor = Executors.newCachedThreadPool(Executors.defaultThreadFactory());
 		ForkJoinPool clientWriter = ForkJoinPool.commonPool();
+		
+		ArrayList<ClientHandler> clients = new ArrayList<ClientHandler>();
 		
 		try (AsynchronousServerSocketChannel asyncServerChannel = AsynchronousServerSocketChannel.open()) {
 			if (asyncServerChannel.isOpen()) {
@@ -74,7 +81,7 @@ public class Server {
 				asyncServerChannel.bind(new InetSocketAddress(Integer.parseInt(args[0])));
 				rootLogger.info("Waiting for connections ...");
 				
-				intClientExecutor.submit(() -> {
+				internalServicesExecutor.submit(() -> {
 					Scanner scan = new Scanner(System.in);
 					Logger internalClientLogger = LogManager.getLogger("internal");
 					while (true) {
@@ -86,7 +93,7 @@ public class Server {
 
 							if (command[0].equals("exit")) {
 								internalEnv.getCommandsMap().get(command[0]).execute(ExecutionType.INTERNAL_CLIENT, internalEnv, Arrays.copyOfRange(command, 1, command.length), System.in, System.out);
-								intClientExecutor.shutdownNow();
+								internalServicesExecutor.shutdownNow();
 								clientReader.shutdownNow();
 								System.exit(0);
 							}
@@ -111,7 +118,7 @@ public class Server {
 						} catch (Exception e) {
 							if (!scan.hasNextLine()) {
 								rootLogger.warn("Inputing is closed! Server is closing...");
-								intClientExecutor.shutdownNow();
+								internalServicesExecutor.shutdownNow();
 								clientReader.shutdownNow();
 								scan.close();
 								System.exit(0);
@@ -123,6 +130,9 @@ public class Server {
 					}
 				});
 				
+				ClientUpdater updater = new ClientUpdater(clients, db.getConnection());
+				internalServicesExecutor.execute(updater);
+				
 				while (true) {
 
 					Future<AsynchronousSocketChannel> asynchFuture = asyncServerChannel.accept();
@@ -131,10 +141,11 @@ public class Server {
 						final AsynchronousSocketChannel asyncChannel = asynchFuture.get();
 						ClientHandler worker = new ClientHandler(asyncChannel, clientEnv, clientExecutor, clientWriter);
 						clientReader.submit(worker);
+						clients.add(worker);
 					} catch (InterruptedException | ExecutionException ex) {
 						rootLogger.error(ex);
 						rootLogger.error("\n Server is shutting down ...");
-						intClientExecutor.shutdownNow();
+						internalServicesExecutor.shutdownNow();
 						clientReader.shutdown();
 						while (!clientReader.isTerminated());
 						break;
@@ -146,14 +157,12 @@ public class Server {
 			} else {
 				rootLogger.error("The asynchronous server-socket channel cannot be opened!");
 			}
-		} catch (IOException ex) {
+		} catch (IOException | SQLException ex) {
 			rootLogger.error(ex);
 		}
 	}
 	
-	private static Environment[] prepareEnvironments(String ssh) {
-		
-		DataBaseManager db = new DataBaseManager(ssh, "s314935", "", "se.ifmo.ru", "studs", 2222, "pg", 2220, 5432);
+	private static Environment[] prepareEnvironments(DataBaseManager db) {
 		
 		HelpCommand.register(clientsCommandsMap);
 		ShowCommand.register(clientsCommandsMap);

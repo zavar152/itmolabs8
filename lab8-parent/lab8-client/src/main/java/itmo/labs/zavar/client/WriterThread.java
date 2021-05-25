@@ -2,6 +2,7 @@ package itmo.labs.zavar.client;
 
 import java.io.ByteArrayInputStream;
 import java.io.ObjectInputStream;
+import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
 import java.util.Base64;
@@ -40,13 +41,17 @@ public class WriterThread implements Runnable{
 				} else {
 					System.out.println(per.getAnswer());
 					System.out.println(per.getLogin());
+					if(per.getData().length != 0)
+						System.out.println(per.getData()[0]);
 				}
 				buf.flip();
 				buf.put(new byte[buf.remaining()]);
 				buf.clear();
+			} catch (SocketException | NegativeArraySizeException e) {
+				isConnected = false;
+				break;
 			} catch (Exception e) {
 				e.printStackTrace();
-				isConnected = false;
 				break;
 			}
 		}

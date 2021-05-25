@@ -113,16 +113,16 @@ public class Client {
 				input = in.nextLine();
 				input = input.replaceAll(" +", " ").trim();
 				String command[] = input.split(" ");
-
-				if(!wrThread.isConnected()) {
-					throw new SocketException();
-				}
 				
 				if (command[0].equals("exit")) {
 					commandsMap.get(command[0]).execute(ExecutionType.CLIENT, env, Arrays.copyOfRange(command, 1, command.length), System.in, System.out);
 					break;
 				}
 
+				if(!wrThread.isConnected()) {
+					throw new SocketException();
+				}
+				
 				if (env.getCommandsMap().containsKey(command[0])) {
 					try {
 						Command c = env.getCommandsMap().get(command[0]);

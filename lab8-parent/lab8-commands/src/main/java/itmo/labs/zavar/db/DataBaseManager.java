@@ -96,8 +96,8 @@ public class DataBaseManager {
 	        ds.setUrl("jdbc:postgresql://" + host + ":" + localPort + "/" + baseName);
 	        ds.setUsername(user);
 	        ds.setPassword(password);
-	        ds.setMinIdle(5);
-	        ds.setMaxIdle(20);
+	        ds.setMinIdle(4);
+	        ds.setMaxIdle(21);
 	        ds.setMaxOpenPreparedStatements(100);
 		}
 		
