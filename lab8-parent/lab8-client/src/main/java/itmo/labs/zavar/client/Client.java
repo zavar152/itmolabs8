@@ -1,10 +1,8 @@
 package itmo.labs.zavar.client;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
@@ -49,7 +47,6 @@ import itmo.labs.zavar.exception.CommandPermissionException;
 public class Client {
 	
 	private static HashMap<String, Command> commandsMap = new HashMap<String, Command>();
-	private static boolean isLogin = false;
 	private static String login, password; 
 	
 	public static void main(String args[]) throws IOException, InterruptedException {
@@ -106,6 +103,10 @@ public class Client {
 		ReadableByteChannel channel = Channels.newChannel(is);
 		ByteBuffer buf = ByteBuffer.allocateDirect(4096*4);
 		String input = "";
+		WriterThread wrThread = new WriterThread(channel, buf);
+		Thread thr = new Thread(wrThread);
+		thr.start();
+		
 		while (true) {
 
 			try {
@@ -113,6 +114,10 @@ public class Client {
 				input = input.replaceAll(" +", " ").trim();
 				String command[] = input.split(" ");
 
+				if(!wrThread.isConnected()) {
+					throw new SocketException();
+				}
+				
 				if (command[0].equals("exit")) {
 					commandsMap.get(command[0]).execute(ExecutionType.CLIENT, env, Arrays.copyOfRange(command, 1, command.length), System.in, System.out);
 					break;
@@ -121,7 +126,7 @@ public class Client {
 				if (env.getCommandsMap().containsKey(command[0])) {
 					try {
 						Command c = env.getCommandsMap().get(command[0]);
-						if (c.isAuthorizationRequired() && !isLogin) {
+						if (c.isAuthorizationRequired() && !wrThread.isLogin()) {
 							throw new CommandPermissionException();
 						} else {
 							env.getHistory().addToGlobal(input);
@@ -134,27 +139,10 @@ public class Client {
 							out.println(str);
 							ser.close();
 							stream.close();
-							buf.rewind();
-							int bytesRead = channel.read(buf);
-							buf.rewind();
-							byte[] b = new byte[bytesRead];
-							for (int i = 0; i < bytesRead; i++) {
-								b[i] = buf.get();
-							}
-							ByteArrayInputStream stream2 = new ByteArrayInputStream(Base64.getMimeDecoder().decode(b));
-							ObjectInputStream obj = new ObjectInputStream(stream2);
-							String per = (String) obj.readObject();
-							if (per.contains("true")) {
-								System.out.println("Login successful!");
-								isLogin = true;
+							if(c.getName().equals("login")) {
 								login = (String) c.getArgs()[0];
 								password = (String) c.getArgs()[1];
-							} else {
-								System.out.println(per);
 							}
-							buf.flip();
-							buf.put(new byte[buf.remaining()]);
-							buf.clear();
 						}
 					} catch (CommandException e) {
 						env.getHistory().clearTempHistory();
@@ -166,7 +154,7 @@ public class Client {
 			} catch (SocketException | NegativeArraySizeException e) {
 				System.out.println("Server is unavailable!\nWaiting for connection...");
 				connected = false;
-				isLogin = false;
+				wrThread.setLogin(false);
 				
 				while(!connected) {
 					try {
@@ -186,6 +174,9 @@ public class Client {
 				out = new PrintWriter(writer, true);
 				channel.close();
 				channel = Channels.newChannel(is);
+				wrThread = new WriterThread(channel, buf);
+				thr = new Thread(wrThread);
+				thr.start();
 				
 				System.out.println("Connected!");
 				

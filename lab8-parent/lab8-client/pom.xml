@@ -61,9 +61,16 @@
 	<dependencies>
 		<dependency>
 			<groupId>itmo.zavar</groupId>
-			<artifactId>lab7-commands</artifactId>
+			<artifactId>lab8-commands</artifactId>
 			<version>0.4.0</version>
 		</dependency>
+
+		<dependency>
+			<groupId>org.openjfx</groupId>
+			<artifactId>javafx-controls</artifactId>
+			<version>11.0.2</version>
+		</dependency>
+
 	</dependencies>
 
 </project>

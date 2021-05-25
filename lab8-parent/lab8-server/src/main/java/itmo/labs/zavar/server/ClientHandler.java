@@ -51,7 +51,7 @@ public class ClientHandler implements Callable<String> {
 				
 				clientWriter.submit(() -> {
 					try {
-						ClientWriter.write(asyncChannel, outBuffer);
+						ClientWriter.write(asyncChannel, outBuffer, per.getLogin());
 					} catch (InterruptedException | ExecutionException | IOException e) {
 						logger.error("Error while writing output to " + host);
 					}

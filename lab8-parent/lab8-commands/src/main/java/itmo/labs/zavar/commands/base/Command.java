@@ -158,6 +158,10 @@ public abstract class Command {
 		return true;
 	}
 	
+	public boolean isInternal() {
+		return false;
+	}
+	
 	/**
 	 * This method returns name mappings for input. Must be overrided if command has
 	 * additional input.
