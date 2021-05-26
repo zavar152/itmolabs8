@@ -6,6 +6,8 @@ import java.io.InputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.io.PipedInputStream;
+import java.io.PipedOutputStream;
 import java.io.PrintWriter;
 import java.io.Writer;
 import java.net.ConnectException;
@@ -95,6 +97,10 @@ public class Client {
 		}
 		System.out.println("Connected!");
 		
+		PipedInputStream pin = new PipedInputStream();
+		PipedOutputStream pout = new PipedOutputStream(pin);
+		Writer pwriter = new OutputStreamWriter(pout, StandardCharsets.US_ASCII);
+		
 		InputStream is = socket.getInputStream();
 		OutputStream os = socket.getOutputStream();
 		Writer writer = new OutputStreamWriter(os, StandardCharsets.US_ASCII);
@@ -103,9 +109,16 @@ public class Client {
 		ReadableByteChannel channel = Channels.newChannel(is);
 		ByteBuffer buf = ByteBuffer.allocateDirect(4096*4);
 		String input = "";
-		ReaderThread wrThread = new ReaderThread(channel, buf);
-		Thread thr = new Thread(wrThread);
+		ReaderThread rdThread = new ReaderThread(channel, buf, pwriter, System.out);
+		Thread thr = new Thread(rdThread);
 		thr.start();
+		
+		new Thread(() -> {
+			Scanner sc = new Scanner(pin);
+			while(true) {
+				System.out.println(sc.hasNext() ? sc.next() : "");
+			}
+		}).start();
 		
 		while (true) {
 
@@ -119,18 +132,18 @@ public class Client {
 					break;
 				}
 
-				if(!wrThread.isConnected()) {
+				if(!rdThread.isConnected()) {
 					throw new SocketException();
 				}
 				
 				if (env.getCommandsMap().containsKey(command[0])) {
 					try {
 						Command c = env.getCommandsMap().get(command[0]);
-						if (c.isAuthorizationRequired() && !wrThread.isLogin()) {
+						if (c.isAuthorizationRequired() && !rdThread.isLogin()) {
 							throw new CommandPermissionException();
 						} else {
 							env.getHistory().addToGlobal(input);
-							if(!wrThread.isConnected()) {
+							if(!rdThread.isConnected()) {
 								throw new SocketException();
 							}
 							c.execute(ExecutionType.CLIENT, env, Arrays.copyOfRange(command, 1, command.length), System.in, System.out);
@@ -146,6 +159,12 @@ public class Client {
 								login = (String) c.getArgs()[0];
 								password = (String) c.getArgs()[1];
 							}
+							/*while(!rdThread.isReadyAns());
+							
+							//System.out.println("lol");
+							System.out.println(rdThread.getAnswer());
+							
+							rdThread.resetReadyAns();*/
 						}
 					} catch (CommandException e) {
 						env.getHistory().clearTempHistory();
@@ -157,7 +176,7 @@ public class Client {
 			} catch (SocketException | NegativeArraySizeException e) {
 				System.out.println("Server is unavailable!\nWaiting for connection...");
 				connected = false;
-				wrThread.setLogin(false);
+				rdThread.setLogin(false);
 				
 				while(!connected) {
 					try {
@@ -177,8 +196,8 @@ public class Client {
 				out = new PrintWriter(writer, true);
 				channel.close();
 				channel = Channels.newChannel(is);
-				wrThread = new ReaderThread(channel, buf);
-				thr = new Thread(wrThread);
+				rdThread = new ReaderThread(channel, buf, pwriter, System.out);
+				thr = new Thread(rdThread);
 				thr.start();
 				
 				System.out.println("Connected!");

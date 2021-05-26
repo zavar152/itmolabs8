@@ -2,6 +2,10 @@ package itmo.labs.zavar.client;
 
 import java.io.ByteArrayInputStream;
 import java.io.ObjectInputStream;
+import java.io.OutputStream;
+import java.io.PrintStream;
+import java.io.PrintWriter;
+import java.io.Writer;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
@@ -14,10 +18,15 @@ public class ReaderThread implements Runnable{
 	private boolean isLogin, isConnected = false;
 	private ReadableByteChannel channel;
 	private ByteBuffer buf;
+	private String data, ans;
+	private PrintWriter dataOut;
+	private OutputStream ansOut;
 	
-	public ReaderThread(ReadableByteChannel channel, ByteBuffer buf) {
+	public ReaderThread(ReadableByteChannel channel, ByteBuffer buf, Writer pwriter, OutputStream ansOut) {
 		this.channel = channel;
 		this.buf = buf;
+		this.ansOut = ansOut;
+		dataOut = new PrintWriter(pwriter, true);
 	}
 
 	@Override
@@ -39,13 +48,17 @@ public class ReaderThread implements Runnable{
 					System.out.println("Login successful!");
 					isLogin = true;
 				} else {
-					System.out.println(per.getAnswer());
-					//System.out.println(per.getLogin());
+					//System.out.println(per.getAnswer());
+					ans = per.getAnswer();
+					((PrintStream) ansOut).println(ans);
 					if(per.getData().length != 0) {
-						String[] res = ((String)per.getData()[0]).split(";");
-						for(int i = 0; i < res.length; i++) {
-							System.out.println(res[i]);
-						}
+						data = ((String)per.getData()[0]);
+						dataOut.println(data);
+						//String[] res = ((String)per.getData()[0]).split(";");
+						/*for(int i = 0; i < res.length; i++) {
+							//System.out.println(res[i]);
+							data = data + res[i];
+						}*/
 					}
 				}
 				buf.flip();
@@ -72,5 +85,4 @@ public class ReaderThread implements Runnable{
 	public boolean isConnected() {
 		return isConnected;
 	}
-
 }
