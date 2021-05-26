@@ -8,7 +8,7 @@ import java.nio.channels.AsynchronousSocketChannel;
 import java.util.Base64;
 import java.util.concurrent.ExecutionException;
 
-import itmo.labs.zavar.commands.base.CommandAnswer;
+import itmo.labs.zavar.commands.base.net.CommandAnswer;
 
 public class ClientWriter {
 

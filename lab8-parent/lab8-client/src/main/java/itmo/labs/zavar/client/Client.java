@@ -103,7 +103,7 @@ public class Client {
 		ReadableByteChannel channel = Channels.newChannel(is);
 		ByteBuffer buf = ByteBuffer.allocateDirect(4096*4);
 		String input = "";
-		WriterThread wrThread = new WriterThread(channel, buf);
+		ReaderThread wrThread = new ReaderThread(channel, buf);
 		Thread thr = new Thread(wrThread);
 		thr.start();
 		
@@ -130,6 +130,9 @@ public class Client {
 							throw new CommandPermissionException();
 						} else {
 							env.getHistory().addToGlobal(input);
+							if(!wrThread.isConnected()) {
+								throw new SocketException();
+							}
 							c.execute(ExecutionType.CLIENT, env, Arrays.copyOfRange(command, 1, command.length), System.in, System.out);
 							env.getHistory().clearTempHistory();
 							ByteArrayOutputStream stream = new ByteArrayOutputStream();
@@ -174,7 +177,7 @@ public class Client {
 				out = new PrintWriter(writer, true);
 				channel.close();
 				channel = Channels.newChannel(is);
-				wrThread = new WriterThread(channel, buf);
+				wrThread = new ReaderThread(channel, buf);
 				thr = new Thread(wrThread);
 				thr.start();
 				

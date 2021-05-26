@@ -27,6 +27,7 @@ public class LoginCommand extends Command {
 		super("login");
 	}
 
+	@SuppressWarnings("resource")
 	@Override
 	public void execute(ExecutionType type, Environment env, Object[] args, InputStream inStream, OutputStream outStream) throws CommandException {
 		if (args instanceof String[] && args.length != 0 && (type.equals(ExecutionType.CLIENT) || type.equals(ExecutionType.INTERNAL_CLIENT))) {

@@ -13,8 +13,8 @@ import java.util.concurrent.Future;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import itmo.labs.zavar.commands.base.CommandPackage;
 import itmo.labs.zavar.commands.base.Environment;
+import itmo.labs.zavar.commands.base.net.CommandPackage;
 
 public class ClientHandler implements Callable<String> {
 

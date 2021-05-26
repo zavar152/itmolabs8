@@ -17,8 +17,10 @@ public class DataBaseManager {
 	private static String user, password, baseName, host;
 	private static int localPort;
 	private static Logger logger = LogManager.getLogger(DataBaseManager.class.getName());
+	@SuppressWarnings("unused")
 	private static BasicDataSource ds = new BasicDataSource();
 
+	@SuppressWarnings("resource")
 	public DataBaseManager(String ssh, String user, String password, String sshHost, String baseName, int sshPort,
 			String remoteHost, int localPort, int remotePort) {
 

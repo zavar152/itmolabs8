@@ -9,7 +9,7 @@ import org.apache.commons.lang3.ArrayUtils;
 
 import itmo.labs.zavar.commands.base.Command;
 import itmo.labs.zavar.commands.base.Command.ExecutionType;
-import itmo.labs.zavar.commands.base.CommandPackage;
+import itmo.labs.zavar.commands.base.net.CommandPackage;
 import itmo.labs.zavar.commands.base.Environment;
 import itmo.labs.zavar.exception.CommandException;
 

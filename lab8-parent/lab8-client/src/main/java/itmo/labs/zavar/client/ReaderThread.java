@@ -7,15 +7,15 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
 import java.util.Base64;
 
-import itmo.labs.zavar.commands.base.CommandAnswer;
+import itmo.labs.zavar.commands.base.net.CommandAnswer;
 
-public class WriterThread implements Runnable{
+public class ReaderThread implements Runnable{
 
 	private boolean isLogin, isConnected = false;
 	private ReadableByteChannel channel;
 	private ByteBuffer buf;
 	
-	public WriterThread(ReadableByteChannel channel, ByteBuffer buf) {
+	public ReaderThread(ReadableByteChannel channel, ByteBuffer buf) {
 		this.channel = channel;
 		this.buf = buf;
 	}
@@ -40,9 +40,13 @@ public class WriterThread implements Runnable{
 					isLogin = true;
 				} else {
 					System.out.println(per.getAnswer());
-					System.out.println(per.getLogin());
-					if(per.getData().length != 0)
-						System.out.println(per.getData()[0]);
+					//System.out.println(per.getLogin());
+					if(per.getData().length != 0) {
+						String[] res = ((String)per.getData()[0]).split(";");
+						for(int i = 0; i < res.length; i++) {
+							System.out.println(res[i]);
+						}
+					}
 				}
 				buf.flip();
 				buf.put(new byte[buf.remaining()]);

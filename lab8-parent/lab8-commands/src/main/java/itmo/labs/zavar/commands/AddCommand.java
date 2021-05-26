@@ -194,7 +194,6 @@ public class AddCommand extends Command {
 			} catch (InputMismatchException e) {
 				throw new CommandRunningException("Input closed!");
 			} catch (Exception e) {
-				e.printStackTrace();
 				throw new CommandRunningException("Parsing error!");
 			}
 		}

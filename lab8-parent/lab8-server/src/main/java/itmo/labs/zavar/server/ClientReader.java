@@ -6,7 +6,7 @@ import java.io.ObjectInputStream;
 import java.nio.ByteBuffer;
 import java.util.Base64;
 
-import itmo.labs.zavar.commands.base.CommandPackage;
+import itmo.labs.zavar.commands.base.net.CommandPackage;
 
 public class ClientReader {
 	

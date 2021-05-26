@@ -4,6 +4,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Arrays;
 
+import itmo.labs.zavar.commands.base.net.CommandPackage;
 import itmo.labs.zavar.exception.CommandException;
 
 /**
@@ -156,10 +157,6 @@ public abstract class Command {
 
 	public boolean isAuthorizationRequired() {
 		return true;
-	}
-	
-	public boolean isInternal() {
-		return false;
 	}
 	
 	/**

@@ -56,34 +56,14 @@ public class ShowCommand extends Command {
 					}
 					stmt = con.prepareStatement(DbUtils.getAll());
 					rs = stmt.executeQuery();
+					String res = "";
 					
-					while(rs.next()) {
-						pr.println("ID: " + rs.getString("id"));
-						pr.println("Owner: " + rs.getString("owner"));
-						pr.println("Name: " + rs.getString("name"));
-						pr.println("Coordinte X: " + rs.getString("x"));
-						pr.println("Coordinte Y: " + rs.getString("y"));
-						pr.println("Creation date: " + rs.getString("creationdate"));
-						pr.println("Students count: " + rs.getString("studentscount"));
-						pr.println("Expelled students: " + rs.getString("expelledstudents"));
-						pr.println("Transferred students: " + rs.getString("transferredstudents"));
-						pr.println("Form of Education: " + rs.getString("formofeducation"));
-						if (rs.getString("adminname") != null) {
-							pr.println("Admin's name: " + rs.getString("adminname"));
-							pr.println("Admin's passport ID: " + rs.getString("adminpassportid"));
-							pr.println("Admin's eye color: " + rs.getString("admineyecolor"));
-							pr.println("Admin's hair color: " + rs.getString("adminhaircolor"));
-							if (rs.getString("adminnationality") != null) {
-								pr.println("Admin's nationality: " + rs.getString("adminnationality"));
-							}
-							pr.println("Admin's location X: " + rs.getString("adminlocationx"));
-							pr.println("Admin's location Y: " + rs.getString("adminlocationy"));
-							pr.println("Admin's location Z: " + rs.getString("adminlocationz"));
-							pr.println("Admin's location name: " + rs.getString("adminlocationname"));
-							pr.println();
-						} else {
-							pr.println();
+					while (rs.next()) {
+						res = "";
+						for (int j = 1; j <= 19; j++) {
+							res = res + rs.getString(j) + ";";
 						}
+						pr.println(res);
 					}
 					con.close();
 					

@@ -1,4 +1,4 @@
-package itmo.labs.zavar.commands.base;
+package itmo.labs.zavar.commands.base.net;
 
 import java.io.Serializable;
 
