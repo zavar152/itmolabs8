@@ -99,7 +99,7 @@ public class ClientUpdater implements Runnable {
 			
 		} catch (SQLException e) {
 			logger.error(e.getMessage());
-			e.printStackTrace();
+			//e.printStackTrace();
 		}
 	}
 

@@ -21,7 +21,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashMap;
-import java.util.Scanner;
 
 import itmo.labs.zavar.commands.AddCommand;
 import itmo.labs.zavar.commands.AddIfMaxCommand;
@@ -48,16 +47,31 @@ import itmo.labs.zavar.exception.CommandPermissionException;
 
 public class Client {
 	
-	private static HashMap<String, Command> commandsMap = new HashMap<String, Command>();
-	private static String login, password; 
+	private HashMap<String, Command> commandsMap = new HashMap<String, Command>();
+	private String login, password; 
+	private PipedInputStream pin;
+	private PipedOutputStream pout;
+	private Writer pwriter;
+	private Environment env;
+	private InputStream is;
+	private OutputStream os;
+	private Writer writer;
+	private PrintWriter out;
+	private ReadableByteChannel channel;
+	private ByteBuffer buf;
+	private String input, data = "";
+	private ReaderThread rdThread;
+	private Thread thr;
+	private Socket socket = null;
+	private boolean connected = false;
+	private String args[];
 	
-	public static void main(String args[]) throws IOException, InterruptedException {
-		
+	public Client(String args[]) {
 		if(args.length != 2) {
 			System.out.println("You should enter ip and port!");
 			System.exit(0);
 		}
-		
+		this.args = args;
 		HelpCommand.register(commandsMap);
 		ShowCommand.register(commandsMap);
 		ExecuteScriptCommand.register(commandsMap);
@@ -76,145 +90,160 @@ public class Client {
 		RegisterCommand.register(commandsMap);
 		LoginCommand.register(commandsMap);
 		
-		Environment env = new Environment(commandsMap);
+		env = new Environment(commandsMap);
 		
-		System.out.println("Connecting to the server...");
-		boolean connected = false;
-		Socket socket = null;
-		while(!connected) {
+		/*new Thread(() -> {
+			@SuppressWarnings("resource")
+			Scanner sc = new Scanner(pin);
+			while(true) {
+				data = sc.hasNext() ? sc.next() : "";
+				System.out.println(data);
+			}
+		}).start();*/
+	}
+	
+	public PipedInputStream getDataInput() {
+		return pin;
+	}
+
+	public boolean isConnected() {
+		return connected;
+	}
+	
+	public void close() throws IOException {
+		socket.close();
+	}
+	
+	public String getData() {
+		return data;
+	}
+	
+	public void connect() throws InterruptedException, IOException {
+		if (!connected) {
+			System.out.println("Connecting to the server...");
+			while (!connected) {
+				try {
+					socket = new Socket(args[0], Integer.parseInt(args[1]));
+					connected = true;
+				} catch (ConnectException e1) {
+					Thread.sleep(2000);
+				} catch (UnknownHostException e) {
+					System.out.println("Unknown host");
+					System.exit(0);
+				} catch (Exception e) {
+					System.out.println("Error during connection");
+					System.exit(0);
+				}
+			}
+			System.out.println("Connected!");
+
+			pin = new PipedInputStream();
+			pout = new PipedOutputStream(pin);
+			pwriter = new OutputStreamWriter(pout, StandardCharsets.US_ASCII);
+
+			is = socket.getInputStream();
+			os = socket.getOutputStream();
+			writer = new OutputStreamWriter(os, StandardCharsets.US_ASCII);
+			out = new PrintWriter(writer, true);
+			channel = Channels.newChannel(is);
+			buf = ByteBuffer.allocateDirect(4096 * 4);
+			rdThread = new ReaderThread(channel, buf, pwriter, System.out);
+			thr = new Thread(rdThread);
+			thr.start();
+		}
+	}
+	
+	public String executeCommand(String input, InputStream in) throws InterruptedException, IOException {
+
+		try {
+			input = input.replaceAll(" +", " ").trim();
+			String command[] = input.split(" ");
+
+			if (command[0].equals("exit")) {
+				commandsMap.get(command[0]).execute(ExecutionType.CLIENT, env, Arrays.copyOfRange(command, 1, command.length), in, System.out);
+				close();
+			}
+
+			if (!rdThread.isConnected()) {
+				throw new SocketException();
+			}
+
+			if (env.getCommandsMap().containsKey(command[0])) {
+				try {
+					Command c = env.getCommandsMap().get(command[0]);
+					if (c.isAuthorizationRequired() && !rdThread.isLogin()) {
+						throw new CommandPermissionException();
+					} else {
+						env.getHistory().addToGlobal(input);
+						if (!rdThread.isConnected()) {
+							throw new SocketException();
+						}
+						c.execute(ExecutionType.CLIENT, env, Arrays.copyOfRange(command, 1, command.length), in, System.out);
+						env.getHistory().clearTempHistory();
+						ByteArrayOutputStream stream = new ByteArrayOutputStream();
+						ObjectOutputStream ser = new ObjectOutputStream(stream);
+						ser.writeObject(c.getPackage(login, password));
+						String str = Base64.getMimeEncoder().encodeToString(stream.toByteArray());
+						out.println(str);
+						ser.close();
+						stream.close();
+						if (c.getName().equals("login")) {
+							login = (String) c.getArgs()[0];
+							password = (String) c.getArgs()[1];
+						}
+						/*
+						 * while(!rdThread.isReadyAns());
+						 * 
+						 * //System.out.println("lol"); System.out.println(rdThread.getAnswer());
+						 * 
+						 * rdThread.resetReadyAns();
+						 */
+						return "done";
+					}
+				} catch (CommandException e) {
+					env.getHistory().clearTempHistory();
+					System.err.println(e.getMessage());
+					return e.getMessage();
+				}
+			} else {
+				System.err.println("Unknown command! Use help.");
+				return "unknown";
+			}
+		} catch (SocketException | NegativeArraySizeException e) {
+			System.out.println("Server is unavailable!\nWaiting for connection...");
+			connected = false;
+			rdThread.setLogin(false);
+			return "sfail";
+		} catch (Exception e) {
+			e.printStackTrace();
+			System.out.println("Unexcepted error!");
+			return "error";
+		}
+	}
+	
+	public void reconnect() throws InterruptedException, IOException {
+		while (!connected) {
 			try {
 				socket = new Socket(args[0], Integer.parseInt(args[1]));
 				connected = true;
 			} catch (ConnectException e1) {
 				Thread.sleep(2000);
-			} catch (UnknownHostException e) {
-				System.out.println("Unknown host");
-				System.exit(0);
-			} catch (Exception e) {
+			} catch (Exception e1) {
 				System.out.println("Error during connection");
 				System.exit(0);
 			}
 		}
-		System.out.println("Connected!");
-		
-		PipedInputStream pin = new PipedInputStream();
-		PipedOutputStream pout = new PipedOutputStream(pin);
-		Writer pwriter = new OutputStreamWriter(pout, StandardCharsets.US_ASCII);
-		
-		InputStream is = socket.getInputStream();
-		OutputStream os = socket.getOutputStream();
-		Writer writer = new OutputStreamWriter(os, StandardCharsets.US_ASCII);
-		PrintWriter out = new PrintWriter(writer, true);
-		Scanner in = new Scanner(System.in);
-		ReadableByteChannel channel = Channels.newChannel(is);
-		ByteBuffer buf = ByteBuffer.allocateDirect(4096*4);
-		String input = "";
-		ReaderThread rdThread = new ReaderThread(channel, buf, pwriter, System.out);
-		Thread thr = new Thread(rdThread);
+
+		is = socket.getInputStream();
+		os = socket.getOutputStream();
+		writer = new OutputStreamWriter(os, StandardCharsets.US_ASCII);
+		out = new PrintWriter(writer, true);
+		channel.close();
+		channel = Channels.newChannel(is);
+		rdThread = new ReaderThread(channel, buf, pwriter, System.out);
+		thr = new Thread(rdThread);
 		thr.start();
-		
-		new Thread(() -> {
-			Scanner sc = new Scanner(pin);
-			while(true) {
-				System.out.println(sc.hasNext() ? sc.next() : "");
-			}
-		}).start();
-		
-		while (true) {
 
-			try {
-				input = in.nextLine();
-				input = input.replaceAll(" +", " ").trim();
-				String command[] = input.split(" ");
-				
-				if (command[0].equals("exit")) {
-					commandsMap.get(command[0]).execute(ExecutionType.CLIENT, env, Arrays.copyOfRange(command, 1, command.length), System.in, System.out);
-					break;
-				}
-
-				if(!rdThread.isConnected()) {
-					throw new SocketException();
-				}
-				
-				if (env.getCommandsMap().containsKey(command[0])) {
-					try {
-						Command c = env.getCommandsMap().get(command[0]);
-						if (c.isAuthorizationRequired() && !rdThread.isLogin()) {
-							throw new CommandPermissionException();
-						} else {
-							env.getHistory().addToGlobal(input);
-							if(!rdThread.isConnected()) {
-								throw new SocketException();
-							}
-							c.execute(ExecutionType.CLIENT, env, Arrays.copyOfRange(command, 1, command.length), System.in, System.out);
-							env.getHistory().clearTempHistory();
-							ByteArrayOutputStream stream = new ByteArrayOutputStream();
-							ObjectOutputStream ser = new ObjectOutputStream(stream);
-							ser.writeObject(c.getPackage(login, password));
-							String str = Base64.getMimeEncoder().encodeToString(stream.toByteArray());
-							out.println(str);
-							ser.close();
-							stream.close();
-							if(c.getName().equals("login")) {
-								login = (String) c.getArgs()[0];
-								password = (String) c.getArgs()[1];
-							}
-							/*while(!rdThread.isReadyAns());
-							
-							//System.out.println("lol");
-							System.out.println(rdThread.getAnswer());
-							
-							rdThread.resetReadyAns();*/
-						}
-					} catch (CommandException e) {
-						env.getHistory().clearTempHistory();
-						System.err.println(e.getMessage());
-					}
-				} else {
-					System.err.println("Unknown command! Use help.");
-				}
-			} catch (SocketException | NegativeArraySizeException e) {
-				System.out.println("Server is unavailable!\nWaiting for connection...");
-				connected = false;
-				rdThread.setLogin(false);
-				
-				while(!connected) {
-					try {
-						socket = new Socket(args[0], Integer.parseInt(args[1]));
-						connected = true;
-					} catch (ConnectException e1) {
-						Thread.sleep(2000);
-					} catch (Exception e1) {
-						System.out.println("Error during connection");
-						System.exit(0);
-					}
-				}
-				
-				is = socket.getInputStream();
-				os = socket.getOutputStream();
-				writer = new OutputStreamWriter(os, StandardCharsets.US_ASCII);
-				out = new PrintWriter(writer, true);
-				channel.close();
-				channel = Channels.newChannel(is);
-				rdThread = new ReaderThread(channel, buf, pwriter, System.out);
-				thr = new Thread(rdThread);
-				thr.start();
-				
-				System.out.println("Connected!");
-				
-			} catch (Exception e) {
-				if (!in.hasNextLine()) {
-					System.out.println("Inputing is closed! Client is closing...");
-					break;
-				} else {
-					e.printStackTrace();
-					System.out.println("Unexcepted error!");
-					break;
-				}
-			}
-		}
-		socket.close();
-		in.close();
+		System.out.println("Connected!");
 	}
-	
 }
