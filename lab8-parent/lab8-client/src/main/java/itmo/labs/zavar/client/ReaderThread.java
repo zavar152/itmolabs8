@@ -2,8 +2,6 @@ package itmo.labs.zavar.client;
 
 import java.io.ByteArrayInputStream;
 import java.io.ObjectInputStream;
-import java.io.OutputStream;
-import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.Writer;
 import java.net.SocketException;
@@ -20,12 +18,12 @@ public class ReaderThread implements Runnable{
 	private ByteBuffer buf;
 	private String data, ans;
 	private PrintWriter dataOut;
-	private OutputStream ansOut;
+	private PrintWriter ansOut;
 	
-	public ReaderThread(ReadableByteChannel channel, ByteBuffer buf, Writer pwriter, OutputStream ansOut) {
+	public ReaderThread(ReadableByteChannel channel, ByteBuffer buf, Writer pwriter, Writer ansOut) {
 		this.channel = channel;
 		this.buf = buf;
-		this.ansOut = ansOut;
+		this.ansOut = new PrintWriter(ansOut, true);
 		dataOut = new PrintWriter(pwriter, true);
 	}
 
@@ -50,7 +48,7 @@ public class ReaderThread implements Runnable{
 				} else {
 					//System.out.println(per.getAnswer());
 					ans = per.getAnswer();
-					((PrintStream) ansOut).println(ans);
+					ansOut.println(ans);
 					if(per.getData().length != 0) {
 						data = ((String)per.getData()[0]);
 						dataOut.println(data);

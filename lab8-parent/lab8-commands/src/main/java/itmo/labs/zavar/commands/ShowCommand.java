@@ -38,7 +38,7 @@ public class ShowCommand extends Command {
 		} else {
 			super.args = args;
 			if (type.equals(ExecutionType.SERVER) | type.equals(ExecutionType.SCRIPT) | type.equals(ExecutionType.INTERNAL_CLIENT)) {
-				
+			 
 				try {
 					Connection con = null;
 					try {
@@ -61,10 +61,16 @@ public class ShowCommand extends Command {
 					while (rs.next()) {
 						res = "";
 						for (int j = 1; j <= 19; j++) {
-							res = res + rs.getString(j) + ";";
+							if(j == 3 || j >= 10) {
+								res = res + rs.getString(j) + ",";
+							} else {
+								res = res + rs.getString(j) + ";";
+							}
 						}
+						res = res.substring(0, res.length()-1);
 						pr.println(res);
 					}
+					pr.print("/-/");
 					con.close();
 					
 				} catch (SQLException e) {

@@ -51,7 +51,10 @@ public class Client {
 	private String login, password; 
 	private PipedInputStream pin;
 	private PipedOutputStream pout;
+	private PipedInputStream apin;
+	private PipedOutputStream apout;
 	private Writer pwriter;
+	private Writer ansWriter;
 	private Environment env;
 	private InputStream is;
 	private OutputStream os;
@@ -106,12 +109,17 @@ public class Client {
 		return pin;
 	}
 
+	public PipedInputStream getAnswerInput() {
+		return apin;
+	}
+	
 	public boolean isConnected() {
 		return connected;
 	}
 	
 	public void close() throws IOException {
-		socket.close();
+		if(socket != null && !socket.isClosed())
+			socket.close();
 	}
 	
 	public String getData() {
@@ -141,13 +149,17 @@ public class Client {
 			pout = new PipedOutputStream(pin);
 			pwriter = new OutputStreamWriter(pout, StandardCharsets.US_ASCII);
 
+			apin = new PipedInputStream();
+			apout = new PipedOutputStream(apin);
+			ansWriter = new OutputStreamWriter(apout, StandardCharsets.US_ASCII);
+			
 			is = socket.getInputStream();
 			os = socket.getOutputStream();
 			writer = new OutputStreamWriter(os, StandardCharsets.US_ASCII);
 			out = new PrintWriter(writer, true);
 			channel = Channels.newChannel(is);
 			buf = ByteBuffer.allocateDirect(4096 * 4);
-			rdThread = new ReaderThread(channel, buf, pwriter, System.out);
+			rdThread = new ReaderThread(channel, buf, pwriter, ansWriter);
 			thr = new Thread(rdThread);
 			thr.start();
 		}
@@ -240,7 +252,7 @@ public class Client {
 		out = new PrintWriter(writer, true);
 		channel.close();
 		channel = Channels.newChannel(is);
-		rdThread = new ReaderThread(channel, buf, pwriter, System.out);
+		rdThread = new ReaderThread(channel, buf, pwriter, ansWriter);
 		thr = new Thread(rdThread);
 		thr.start();
 

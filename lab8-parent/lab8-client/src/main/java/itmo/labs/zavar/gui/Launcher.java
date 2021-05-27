@@ -1,17 +1,22 @@
 package itmo.labs.zavar.gui;
 
 import java.io.IOException;
+import java.io.PipedInputStream;
 
 import itmo.labs.zavar.client.Client;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.concurrent.Task;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
+import javafx.scene.image.Image;
 import javafx.stage.Stage;
 
 public class Launcher extends Application{
 
 	public static Client client;
+	public static PipedInputStream pin;
+	
 	public static void main(String[] args) throws IOException, InterruptedException {
         /*Task<Void> task = new Task<Void>() {
         	@Override
@@ -26,6 +31,13 @@ public class Launcher extends Application{
 	}
 
 	@Override
+	public void stop() throws Exception {
+		client.close();
+		Platform.exit();
+		System.exit(0);
+	}
+	
+	@Override
 	public void start(Stage primaryStage) throws Exception {
 		
 		Scene scene = new Scene(FXMLLoader.load(getClass().getResource("/fxml/app.fxml")), 600, 400);
@@ -33,6 +45,8 @@ public class Launcher extends Application{
 		primaryStage.setMinHeight(400);
 		primaryStage.setMinWidth(600);
 		primaryStage.setResizable(true);
+		primaryStage.setTitle("Lab8 Client");
+		primaryStage.getIcons().add(new Image(getClass().getResourceAsStream("/img/icon.png")));
 		primaryStage.show();
 		
 		Task<Void> task = new Task<Void>() {

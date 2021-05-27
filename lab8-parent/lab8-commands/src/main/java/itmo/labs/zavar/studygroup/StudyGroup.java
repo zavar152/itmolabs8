@@ -18,6 +18,7 @@ public class StudyGroup implements Comparable<StudyGroup>, Serializable {
 	
 	private static final long serialVersionUID = -3915109296748159784L;
 	
+	private Long id;
 	private String name;
 	private Coordinates coordinates;
 	private LocalDate creationDate;
@@ -125,6 +126,10 @@ public class StudyGroup implements Comparable<StudyGroup>, Serializable {
 		}
 	}
 
+	public void setId(Long id) {
+		this.id = id;
+	}
+	
 	public Long getStudentsCount() {
 		return studentsCount;
 	}
