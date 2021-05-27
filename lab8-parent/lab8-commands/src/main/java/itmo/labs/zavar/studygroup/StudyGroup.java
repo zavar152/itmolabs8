@@ -106,6 +106,10 @@ public class StudyGroup implements Comparable<StudyGroup>, Serializable {
 		return name;
 	}
 
+	public Long getId() {
+		return id;
+	}
+	
 	public void setName(String name) {
 		if (name == null || name.isEmpty()) {
 			throw new IllegalArgumentException("Name can't be null or empty");

@@ -5,6 +5,7 @@ import java.io.PipedInputStream;
 import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
+import java.util.Random;
 import java.util.Scanner;
 import java.util.Stack;
 
@@ -24,11 +25,13 @@ import itmo.labs.zavar.client.ParseCoordinates;
 import itmo.labs.zavar.client.ParsePerson;
 import itmo.labs.zavar.studygroup.FormOfEducation;
 import itmo.labs.zavar.studygroup.StudyGroup;
+import javafx.animation.ParallelTransition;
 import javafx.animation.ScaleTransition;
 import javafx.animation.SequentialTransition;
 import javafx.application.Platform;
 import javafx.concurrent.Task;
 import javafx.fxml.FXML;
+import javafx.scene.Cursor;
 import javafx.scene.Group;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -47,61 +50,22 @@ public class ClientController {
 	private Stack<StudyGroup> stack = new Stack<StudyGroup>(); 
 	
 	@FXML
-	AnchorPane browser;
+	private AnchorPane browser;
 	@FXML
-	ScrollPane scrollPane;
+	private ScrollPane scrollPane;
 	@FXML
-	Label info_text;
+	private Label info_text;
 	@FXML
-	Button show_button;
+	private Button show_button;
 	
-	HashMap<Integer, Circle> objectsMap = new HashMap<Integer, Circle>();
+	private HashMap<Integer, Circle> objectsMap = new HashMap<Integer, Circle>();
+	private Group objectGroup = new Group();
 	
 	@FXML
     void initialize() throws IOException 
     {
 		
-		show_button.setOnAction(e -> {
-			try {
-				//BufferedOutputStream bout = new BufferedOutputStream(pout);
-				//Writer pwriter = new OutputStreamWriter(pout, StandardCharsets.US_ASCII);
-				Launcher.client.executeCommand("show", new ReaderInputStream(new StringReader(""), StandardCharsets.UTF_8));
-				Task<Void> task = new Task<Void>() {
-					@Override
-					protected Void call() throws Exception {
-						Scanner sc = new Scanner(Launcher.client.getAnswerInput());
-						while (sc.hasNextLine()) {
-							String a = sc.next();
-							String[] m = a.split(",");
-							String b = a.replace(","+m[m.length-1], "");
-							System.out.println("Owner: " + m[m.length-1]);
-							System.out.println(b);
-							if(a.contains("/-/"))
-								break;
-							generateStydyGroup(b);
-							System.out.println("Stack: "+ stack.size());
-						}
-						System.out.println();
-						return null;
-					}
-				};
-				new Thread(task).start();
-				
-				task.setOnRunning(s -> {
-					show_button.setDisable(true);
-				});
-				
-				task.setOnSucceeded(s -> {
-					System.out.println("Done");
-					show_button.setDisable(false);
-				});
-    			
-			} catch (InterruptedException | IOException e1) {
-				e1.printStackTrace();
-			}
-		});
-		
-		Circle circle2 = new Circle(50, Paint.valueOf("RED"));
+		/*Circle circle2 = new Circle(50, Paint.valueOf("RED"));
 		circle2.setCenterX(-15);
 		circle2.setCenterY(-400);
 		
@@ -110,12 +74,11 @@ public class ClientController {
 		circle.setCenterY(400);
 		
 		objectsMap.put(5, circle);
-		objectsMap.put(3, circle2);
+		objectsMap.put(3, circle2);*/
 		
-		Group group = new Group(circle, circle2);
 		
-        StackPane content = new StackPane(group);
-        group.layoutBoundsProperty().addListener((observable, oldBounds, newBounds) -> {
+        StackPane content = new StackPane(objectGroup);
+        objectGroup.layoutBoundsProperty().addListener((observable, oldBounds, newBounds) -> {
             content.setMinWidth(newBounds.getWidth());
             content.setMinHeight(newBounds.getHeight());
         });
@@ -125,94 +88,106 @@ public class ClientController {
         scrollPane.viewportBoundsProperty().addListener((observable, oldBounds, newBounds) -> {
             content.setPrefSize(newBounds.getWidth(), newBounds.getHeight());
         });
-		
-
-		ScaleTransition sctr = new ScaleTransition(Duration.millis(2000), circle);
-        sctr.setToX(0);
-        sctr.setToY(0);
-        sctr.setCycleCount(1);
-        sctr.setAutoReverse(true);
-        SequentialTransition str = new SequentialTransition();
-        str.getChildren().addAll(sctr);
         
-		Task<Void> task = new Task<Void>() {
-        	@Override
-        	protected Void call() throws Exception {
-        		
-        		while(!Launcher.client.isConnected()) {
-        			Thread.sleep(100);
-        		}
-        		
-        		Launcher.client.executeCommand("login", new ReaderInputStream(new StringReader("zavar\n123456789"), StandardCharsets.UTF_8));
-        		
-                PipedInputStream pin = Launcher.client.getDataInput();
-                
-                Task<Void> task = new Task<Void>() {
-                	@Override
-                	protected Void call() throws Exception {
-                		@SuppressWarnings("resource")
-            			Scanner sc = new Scanner(pin);
-            			while(true) {
-            				//System.out.println(sc.hasNext() ? sc.next() : "");
-            				if(sc.hasNext()) {
-            					String a = sc.next();
-            					System.out.println(a);
-            					String[] res = a.split(";");
-            					if(res[0].equals("DELETE")) {
-            						//circle.setFill(Paint.valueOf("GREEN"));
-            						//group.getChildren().clear();//(objectsMap.get(Integer.parseInt(res[1])));
-            						//((Group)((StackPane)scrollPane.contentProperty().get()).getChildren().get(0)).getChildren().remove(0);
-            						Platform.runLater(() -> {
-            					        str.play();
-            					        str.setOnFinished(e -> {
-            					        	group.getChildren().remove(circle);
-            					        });
-            						}); 
-            					}
-            				}
-            			}
-                	}
-                };
-                
-                new Thread(task).start();
-        		
-        		return null;
-        	}
-		};
-		
-		task.setOnRunning(s -> {
-			info_text.setText("Status: Connecting...");
-			scrollPane.setDisable(true);
+		show_button.setOnAction(e -> {
+
+			Task<Void> task = new Task<Void>() {
+				@Override
+				protected Void call() throws Exception {
+
+					while (!Launcher.client.isConnected()) {
+						Thread.sleep(100);
+					}
+
+					Launcher.client.executeCommand("login",
+							new ReaderInputStream(new StringReader("zavar\n123456789"), StandardCharsets.UTF_8));
+
+					PipedInputStream pin = Launcher.client.getDataInput();
+
+					Task<Void> task = new Task<Void>() {
+						@Override
+						protected Void call() throws Exception {
+							@SuppressWarnings("resource")
+							Scanner sc = new Scanner(pin);
+							while (true) {
+								if (sc.hasNext()) {
+									String a = sc.next();
+									System.out.println(a);
+									String[] res = a.split(";");
+									if (res[0].equals("DELETE")) {
+										
+										Circle circle = objectsMap.get(Integer.parseInt(res[1]));
+										
+										ScaleTransition sctr = new ScaleTransition(Duration.millis(2000), circle);
+								        sctr.setToX(0);
+								        sctr.setToY(0);
+								        sctr.setCycleCount(1);
+								        sctr.setAutoReverse(true);
+								        SequentialTransition deleteSt = new SequentialTransition();
+								        deleteSt.getChildren().addAll(sctr);
+										
+										Platform.runLater(() -> {
+											deleteSt.play();
+											deleteSt.setOnFinished(e -> {
+												objectGroup.getChildren().remove(circle);
+											});
+										});
+									}
+								}
+							}
+						}
+					};
+
+					new Thread(task).start();
+
+					return null;
+				}
+			};
+
+			task.setOnRunning(s -> {
+				info_text.setText("Status: Connecting...");
+				scrollPane.setDisable(true);
+			});
+
+			task.setOnSucceeded(s -> {
+				info_text.setText("Status: Building objects...");
+				Task<Void> task2 = new Task<Void>() {
+					@Override
+					protected Void call() throws Exception {
+						try {
+						Thread.sleep(1000);
+						prepareObjectBrowser();
+						} catch(Exception e) {
+							e.printStackTrace();
+						}
+						return null;
+					}
+				};
+				new Thread(task2).start();
+
+				task2.setOnSucceeded(e2 -> {
+					scrollPane.setDisable(false);
+					info_text.setText("Status: Ready");
+				});
+
+			});
+
+			new Thread(task).start();
+
 		});
-		
-		task.setOnSucceeded(s -> {
-			info_text.setText("Status: Connected");
-			scrollPane.setDisable(false);
-		});
-		
-		
-		
-		new Thread(task).start();
     }
 
-	private void generateStydyGroup(String s) {
+	private String[] generateStydyGroup(String s, String own) throws IOException {
 		beanReader = new CsvBeanReader(new StringReader(s), CsvPreference.EXCEL_NORTH_EUROPE_PREFERENCE);
-			//beanReader.getHeader(true);
+		// beanReader.getHeader(true);
 		StudyGroup temp;
-		try {
-			while ((temp = beanReader.read(StudyGroup.class, nameMapping, getReaderProcessors())) != null) {
-					stack.push(temp);
-			}
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+		String[] out = null;
+		while ((temp = beanReader.read(StudyGroup.class, nameMapping, getReaderProcessors())) != null) {
+			stack.push(temp);
+			out = new String[] {temp.getCoordinates().getX() + "", temp.getCoordinates().getY()  + "", temp.getId() + "", temp.getStudentsCount() + ""};
 		}
-		try {
-			beanReader.close();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		beanReader.close();
+		return out;
 	}
 	
 	private CellProcessor[] getReaderProcessors() {
@@ -221,5 +196,72 @@ public class ClientController {
 				new NotNull(new ParseLong()), new NotNull(new ParseInt()), new NotNull(new ParseLong()),
 				new NotNull(new ParseEnum(FormOfEducation.class)), new Optional(new ParsePerson()) };
 		return processors;
+	}
+	
+	private void prepareObjectBrowser() {
+		ParallelTransition str = new ParallelTransition();
+		try {
+			Launcher.client.executeCommand("show", new ReaderInputStream(new StringReader(""), StandardCharsets.UTF_8));
+			Task<Void> task = new Task<Void>() {
+				@Override
+				protected Void call() throws Exception {
+					try {
+						Scanner sc = new Scanner(Launcher.client.getAnswerInput());
+						while (sc.hasNextLine()) {
+							String a = sc.next();
+							String[] m = a.split(",");
+							String own = m[m.length - 1];
+							String b = a.replace("," + own, "");
+							if (a.contains("/-/"))
+								break;
+							System.out.println("Owner: " + own);
+							System.out.println(b);
+							String[] ar = generateStydyGroup(b, own);
+							Platform.runLater(() -> {
+								byte[] l = own.getBytes();
+								long seed = 0;
+								for (int i = 0; i < l.length; i++)
+									seed = seed + l[i];
+								Random random = new Random(seed);
+								int nextInt = random.nextInt(0xffffff + 1);
+								Circle obj = new Circle(Float.parseFloat(ar[0]), Float.parseFloat(ar[1]), 25,
+										Paint.valueOf(String.format("#%06x", nextInt)));
+
+								ScaleTransition sctr = new ScaleTransition(Duration.millis(500), obj);
+								sctr.setFromX(0);
+								sctr.setFromY(0);
+								sctr.setToX(1);
+								sctr.setToY(1);
+								sctr.setCycleCount(1);
+								sctr.setAutoReverse(true);
+								str.getChildren().add(sctr);
+
+								// obj.setStyle("-fx-border-color: #000000;");
+								obj.setStroke(Paint.valueOf("Black"));
+								obj.setStrokeWidth(1.0);
+								obj.setOnMouseClicked(e -> {
+									System.out.println(own);
+								});
+								obj.cursorProperty().set(Cursor.DEFAULT);
+								objectGroup.getChildren().add(obj);
+								objectsMap.put(Integer.parseInt(ar[2]), obj);
+							});
+						}
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+					return null;
+				}
+			};
+			new Thread(task).start();
+
+			task.setOnSucceeded(s -> {
+				System.out.println("Done");
+				str.play();
+			});
+
+		} catch (InterruptedException | IOException e1) {
+			e1.printStackTrace();
+		}
 	}
 }

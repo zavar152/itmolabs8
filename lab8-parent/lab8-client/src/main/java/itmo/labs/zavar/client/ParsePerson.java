@@ -53,7 +53,7 @@ public class ParsePerson extends CellProcessorAdaptor implements StringCellProce
 					person = new Person(str[0].trim(), str[1].trim(), Color.valueOf(str[2].trim()),
 							Color.valueOf(str[3].trim()), Country.valueOf(str[4].trim()),
 							new Location(Float.parseFloat(str[5].trim()), Float.parseFloat(str[6].trim()),
-									Long.parseLong(str[7].trim()), str[8].trim()));
+									(long) Float.parseFloat(str[7].trim()), str[8].trim()));
 				} else {
 					person = null;
 				}
