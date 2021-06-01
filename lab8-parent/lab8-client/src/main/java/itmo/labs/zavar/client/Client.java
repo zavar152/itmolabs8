@@ -22,6 +22,8 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashMap;
 
+import itmo.labs.zavar.client.util.ClientState;
+import itmo.labs.zavar.client.util.CommandState;
 import itmo.labs.zavar.commands.AddCommand;
 import itmo.labs.zavar.commands.AddIfMaxCommand;
 import itmo.labs.zavar.commands.AddIfMinCommand;
@@ -49,7 +51,7 @@ public class Client {
 	
 	private HashMap<String, Command> commandsMap = new HashMap<String, Command>();
 	private String login, password; 
-	private PipedInputStream pin;
+	private PipedInputStream dpin;
 	private PipedOutputStream pout;
 	private PipedInputStream apin;
 	private PipedOutputStream apout;
@@ -62,18 +64,15 @@ public class Client {
 	private PrintWriter out;
 	private ReadableByteChannel channel;
 	private ByteBuffer buf;
-	private String input, data = "";
 	private ReaderThread rdThread;
 	private Thread thr;
 	private Socket socket = null;
-	private boolean connected = false;
+	private boolean connected, lastSent = false;
 	private String args[];
+	private ClientState clientState;
+	private CommandState commandState;
 	
 	public Client(String args[]) {
-		if(args.length != 2) {
-			System.out.println("You should enter ip and port!");
-			System.exit(0);
-		}
 		this.args = args;
 		HelpCommand.register(commandsMap);
 		ShowCommand.register(commandsMap);
@@ -94,19 +93,10 @@ public class Client {
 		LoginCommand.register(commandsMap);
 		
 		env = new Environment(commandsMap);
-		
-		/*new Thread(() -> {
-			@SuppressWarnings("resource")
-			Scanner sc = new Scanner(pin);
-			while(true) {
-				data = sc.hasNext() ? sc.next() : "";
-				System.out.println(data);
-			}
-		}).start();*/
 	}
 	
 	public PipedInputStream getDataInput() {
-		return pin;
+		return dpin;
 	}
 
 	public PipedInputStream getAnswerInput() {
@@ -117,18 +107,26 @@ public class Client {
 		return connected;
 	}
 	
+	public ClientState getClientState() {
+		return clientState;
+	}
+	
+	public CommandState getLastCommandState() {
+		return commandState;
+	}
+	
+	public boolean isLastCommandSent() {
+		return lastSent;
+	}
+	
 	public void close() throws IOException {
 		if(socket != null && !socket.isClosed())
 			socket.close();
 	}
 	
-	public String getData() {
-		return data;
-	}
-	
 	public void connect() throws InterruptedException, IOException {
 		if (!connected) {
-			System.out.println("Connecting to the server...");
+			clientState = ClientState.CONNECTING;
 			while (!connected) {
 				try {
 					socket = new Socket(args[0], Integer.parseInt(args[1]));
@@ -136,17 +134,17 @@ public class Client {
 				} catch (ConnectException e1) {
 					Thread.sleep(2000);
 				} catch (UnknownHostException e) {
-					System.out.println("Unknown host");
-					System.exit(0);
+					clientState = ClientState.HOST_ERROR;
+					return;
 				} catch (Exception e) {
-					System.out.println("Error during connection");
-					System.exit(0);
+					clientState = ClientState.ERROR;
+					return;
 				}
 			}
-			System.out.println("Connected!");
+			clientState = ClientState.CONNECTED;
 
-			pin = new PipedInputStream();
-			pout = new PipedOutputStream(pin);
+			dpin = new PipedInputStream();
+			pout = new PipedOutputStream(dpin);
 			pwriter = new OutputStreamWriter(pout, StandardCharsets.US_ASCII);
 
 			apin = new PipedInputStream();
@@ -165,7 +163,7 @@ public class Client {
 		}
 	}
 	
-	public String executeCommand(String input, InputStream in) throws InterruptedException, IOException {
+	public void executeCommand(String input, InputStream in) throws InterruptedException, IOException {
 
 		try {
 			input = input.replaceAll(" +", " ").trim();
@@ -210,26 +208,28 @@ public class Client {
 						 * 
 						 * rdThread.resetReadyAns();
 						 */
-						return "done";
+						commandState = CommandState.DONE;
 					}
 				} catch (CommandException e) {
 					env.getHistory().clearTempHistory();
 					System.err.println(e.getMessage());
-					return e.getMessage();
+					commandState = CommandState.ERROR;
 				}
 			} else {
 				System.err.println("Unknown command! Use help.");
-				return "unknown";
+				commandState = CommandState.UNSTATED;
 			}
 		} catch (SocketException | NegativeArraySizeException e) {
-			System.out.println("Server is unavailable!\nWaiting for connection...");
+			clientState = ClientState.SERVER_UNAVAILABLE;
 			connected = false;
 			rdThread.setLogin(false);
-			return "sfail";
+			commandState = CommandState.SERVER_UNAVAILABLE;
+			return;
 		} catch (Exception e) {
 			e.printStackTrace();
-			System.out.println("Unexcepted error!");
-			return "error";
+			clientState = ClientState.ERROR;
+			commandState = CommandState.ERROR;
+			return;
 		}
 	}
 	
@@ -241,8 +241,8 @@ public class Client {
 			} catch (ConnectException e1) {
 				Thread.sleep(2000);
 			} catch (Exception e1) {
-				System.out.println("Error during connection");
-				System.exit(0);
+				clientState = ClientState.ERROR;
+				return;
 			}
 		}
 
@@ -256,6 +256,6 @@ public class Client {
 		thr = new Thread(rdThread);
 		thr.start();
 
-		System.out.println("Connected!");
+		clientState = ClientState.CONNECTED;
 	}
 }

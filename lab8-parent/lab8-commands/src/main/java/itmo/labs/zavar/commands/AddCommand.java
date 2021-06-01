@@ -89,7 +89,7 @@ public class AddCommand extends Command {
 					pr.println("Enter name:");
 					name = InputParser.parseString(outStream, in, "Name", Integer.MIN_VALUE, Integer.MAX_VALUE,
 							false, false);
-
+					
 					pr.println("Enter X coordinate:");
 					Double x = InputParser.parseDouble(outStream, in, "X", -573.0d, Double.MAX_VALUE, false, false);
 					pr.println("Enter Y coordinate:");

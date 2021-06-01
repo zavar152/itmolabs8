@@ -43,6 +43,7 @@ public class Location implements Serializable {
 		if (name != null && name.length() > 348) {
 			throw new IllegalArgumentException("Name length can't be greater than 348");
 		} else {
+			name.replaceAll("/-/", "");
 			this.name = name;
 		}
 	}

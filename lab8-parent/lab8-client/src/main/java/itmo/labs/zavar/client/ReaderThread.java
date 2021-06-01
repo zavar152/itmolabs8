@@ -44,6 +44,7 @@ public class ReaderThread implements Runnable{
 				CommandAnswer per = (CommandAnswer) obj.readObject();
 				if (per.getAnswer().contains("true")) {
 					System.out.println("Login successful!");
+					ansOut.println("loginDone");
 					isLogin = true;
 				} else {
 					//System.out.println(per.getAnswer());

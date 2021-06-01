@@ -64,6 +64,7 @@ public class StudyGroup implements Comparable<StudyGroup>, Serializable {
 		if (name == null || name.isEmpty()) {
 			throw new IllegalArgumentException("Name can't be null or empty");
 		} else {
+			name.replaceAll("/-/", "");
 			this.name = name;
 		}
 

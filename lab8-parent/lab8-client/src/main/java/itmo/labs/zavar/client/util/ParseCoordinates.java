@@ -1,4 +1,4 @@
-package itmo.labs.zavar.client;
+package itmo.labs.zavar.client.util;
 
 import org.supercsv.cellprocessor.CellProcessorAdaptor;
 import org.supercsv.cellprocessor.ift.CellProcessor;
@@ -31,12 +31,6 @@ public class ParseCoordinates extends CellProcessorAdaptor implements StringCell
 
 		if (value instanceof String) {
 			String[] str = ((String) value).split(",");
-			/*if (str[0].contains("x=") && str[1].contains("y=")) {
-				str[0] = str[0].split("=")[1].trim();
-				str[1] = str[1].split("=")[1].trim();
-			} else {
-				throw new IllegalArgumentException();
-			}*/
 			try {
 				coordinates = new Coordinates(Double.parseDouble(str[0]), Float.parseFloat(str[1]));
 			} catch (IllegalArgumentException e) {

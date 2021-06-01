@@ -3,9 +3,12 @@ package itmo.labs.zavar.gui;
 import java.io.IOException;
 import java.io.PipedInputStream;
 import java.io.StringReader;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Random;
+import java.util.ResourceBundle;
 import java.util.Scanner;
 import java.util.Stack;
 
@@ -21,8 +24,8 @@ import org.supercsv.io.CsvBeanReader;
 import org.supercsv.io.ICsvBeanReader;
 import org.supercsv.prefs.CsvPreference;
 
-import itmo.labs.zavar.client.ParseCoordinates;
-import itmo.labs.zavar.client.ParsePerson;
+import itmo.labs.zavar.client.util.ParseCoordinates;
+import itmo.labs.zavar.client.util.ParsePerson;
 import itmo.labs.zavar.studygroup.FormOfEducation;
 import itmo.labs.zavar.studygroup.StudyGroup;
 import javafx.animation.ParallelTransition;
@@ -31,18 +34,23 @@ import javafx.animation.SequentialTransition;
 import javafx.application.Platform;
 import javafx.concurrent.Task;
 import javafx.fxml.FXML;
+import javafx.fxml.Initializable;
 import javafx.scene.Cursor;
 import javafx.scene.Group;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.TextField;
+import javafx.scene.input.MouseButton;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.Circle;
+import javafx.scene.text.Text;
+import javafx.scene.text.TextBoundsType;
 import javafx.util.Duration;
 
-public class ClientController {
+public class ClientController implements Initializable {
 	
 	private final String[] nameMapping = new String[] { "id", "name", "coordinates", "creationDate",
 			"studentsCount", "expelledStudents", "transferredStudents", "formOfEducation", "groupAdmin" };
@@ -54,29 +62,18 @@ public class ClientController {
 	@FXML
 	private ScrollPane scrollPane;
 	@FXML
-	private Label info_text;
+	private Label infoText;
 	@FXML
-	private Button show_button;
+	private Button showButton, langButton;
+	@FXML
+	private TextField objectName, objectId;
 	
-	private HashMap<Integer, Circle> objectsMap = new HashMap<Integer, Circle>();
+	private HashMap<Long, Circle> objectsMap = new HashMap<Long, Circle>();
 	private Group objectGroup = new Group();
 	
-	@FXML
-    void initialize() throws IOException 
+	@Override
+    public void initialize(URL location, ResourceBundle resources) 
     {
-		
-		/*Circle circle2 = new Circle(50, Paint.valueOf("RED"));
-		circle2.setCenterX(-15);
-		circle2.setCenterY(-400);
-		
-		Circle circle = new Circle(50, Paint.valueOf("BLUE"));
-		circle.setCenterX(1500);
-		circle.setCenterY(400);
-		
-		objectsMap.put(5, circle);
-		objectsMap.put(3, circle2);*/
-		
-		
         StackPane content = new StackPane(objectGroup);
         objectGroup.layoutBoundsProperty().addListener((observable, oldBounds, newBounds) -> {
             content.setMinWidth(newBounds.getWidth());
@@ -89,20 +86,25 @@ public class ClientController {
             content.setPrefSize(newBounds.getWidth(), newBounds.getHeight());
         });
         
-		show_button.setOnAction(e -> {
+        langButton.setOnMouseClicked(e -> {
+        	ResourceBundle bundle = ResourceBundle.getBundle("langs/lang", new Locale("en", "US"));
+        	showButton.setText(bundle.getString("button.show"));
+        });
+        
+		showButton.setOnMouseClicked(e -> {
 
 			Task<Void> task = new Task<Void>() {
 				@Override
 				protected Void call() throws Exception {
 
-					while (!Launcher.client.isConnected()) {
+					while (!Launcher.getClient().isConnected()) {
 						Thread.sleep(100);
 					}
 
-					Launcher.client.executeCommand("login",
+					Launcher.getClient().executeCommand("login",
 							new ReaderInputStream(new StringReader("zavar\n123456789"), StandardCharsets.UTF_8));
 
-					PipedInputStream pin = Launcher.client.getDataInput();
+					PipedInputStream pin = Launcher.getClient().getDataInput();
 
 					Task<Void> task = new Task<Void>() {
 						@Override
@@ -116,20 +118,23 @@ public class ClientController {
 									String[] res = a.split(";");
 									if (res[0].equals("DELETE")) {
 										
-										Circle circle = objectsMap.get(Integer.parseInt(res[1]));
+										Circle circle = objectsMap.get(Long.parseLong(res[1]));
 										
-										ScaleTransition sctr = new ScaleTransition(Duration.millis(2000), circle);
+										ScaleTransition sctr = new ScaleTransition(Duration.millis(2000), circle.getParent());
 								        sctr.setToX(0);
 								        sctr.setToY(0);
+								        sctr.setFromX(1);
+								        sctr.setFromY(1);
 								        sctr.setCycleCount(1);
 								        sctr.setAutoReverse(true);
 								        SequentialTransition deleteSt = new SequentialTransition();
 								        deleteSt.getChildren().addAll(sctr);
 										
 										Platform.runLater(() -> {
+											clearInfo();
 											deleteSt.play();
 											deleteSt.setOnFinished(e -> {
-												objectGroup.getChildren().remove(circle);
+												objectGroup.getChildren().remove(circle.getParent());
 											});
 										});
 									}
@@ -145,18 +150,24 @@ public class ClientController {
 			};
 
 			task.setOnRunning(s -> {
-				info_text.setText("Status: Connecting...");
+				infoText.setText("Status: Connecting...");
 				scrollPane.setDisable(true);
 			});
 
 			task.setOnSucceeded(s -> {
-				info_text.setText("Status: Building objects...");
+				infoText.setText("Status: Building objects...");
 				Task<Void> task2 = new Task<Void>() {
 					@Override
 					protected Void call() throws Exception {
 						try {
-						Thread.sleep(1000);
-						prepareObjectBrowser();
+							Scanner sc = new Scanner(Launcher.getClient().getAnswerInput());
+							while (sc.hasNext()) {
+								if(sc.nextLine().equals("loginDone"))
+									break;
+							}
+						Platform.runLater(() -> {
+							prepareObjectBrowser();
+						});
 						} catch(Exception e) {
 							e.printStackTrace();
 						}
@@ -167,7 +178,7 @@ public class ClientController {
 
 				task2.setOnSucceeded(e2 -> {
 					scrollPane.setDisable(false);
-					info_text.setText("Status: Ready");
+					infoText.setText("Status: Ready");
 				});
 
 			});
@@ -177,14 +188,14 @@ public class ClientController {
 		});
     }
 
-	private String[] generateStydyGroup(String s, String own) throws IOException {
+	private StudyGroup generateStydyGroup(String s, String own) throws IOException {
 		beanReader = new CsvBeanReader(new StringReader(s), CsvPreference.EXCEL_NORTH_EUROPE_PREFERENCE);
 		// beanReader.getHeader(true);
 		StudyGroup temp;
-		String[] out = null;
+		StudyGroup out = null;
 		while ((temp = beanReader.read(StudyGroup.class, nameMapping, getReaderProcessors())) != null) {
 			stack.push(temp);
-			out = new String[] {temp.getCoordinates().getX() + "", temp.getCoordinates().getY()  + "", temp.getId() + "", temp.getStudentsCount() + ""};
+			out = temp;//new String[] {temp.getCoordinates().getX() + "", temp.getCoordinates().getY()  + "", temp.getId() + "", temp.getStudentsCount() + ""};
 		}
 		beanReader.close();
 		return out;
@@ -201,12 +212,12 @@ public class ClientController {
 	private void prepareObjectBrowser() {
 		ParallelTransition str = new ParallelTransition();
 		try {
-			Launcher.client.executeCommand("show", new ReaderInputStream(new StringReader(""), StandardCharsets.UTF_8));
+			Launcher.getClient().executeCommand("show", new ReaderInputStream(new StringReader(""), StandardCharsets.UTF_8));
 			Task<Void> task = new Task<Void>() {
 				@Override
 				protected Void call() throws Exception {
 					try {
-						Scanner sc = new Scanner(Launcher.client.getAnswerInput());
+						Scanner sc = new Scanner(Launcher.getClient().getAnswerInput());
 						while (sc.hasNextLine()) {
 							String a = sc.next();
 							String[] m = a.split(",");
@@ -216,7 +227,7 @@ public class ClientController {
 								break;
 							System.out.println("Owner: " + own);
 							System.out.println(b);
-							String[] ar = generateStydyGroup(b, own);
+							StudyGroup ar = generateStydyGroup(b, own);
 							Platform.runLater(() -> {
 								byte[] l = own.getBytes();
 								long seed = 0;
@@ -224,10 +235,20 @@ public class ClientController {
 									seed = seed + l[i];
 								Random random = new Random(seed);
 								int nextInt = random.nextInt(0xffffff + 1);
-								Circle obj = new Circle(Float.parseFloat(ar[0]), Float.parseFloat(ar[1]), 25,
-										Paint.valueOf(String.format("#%06x", nextInt)));
+								Circle obj = new Circle();
 
-								ScaleTransition sctr = new ScaleTransition(Duration.millis(500), obj);
+								obj.setFill(Paint.valueOf(String.format("#%06x", nextInt)));
+								obj.setRadius(25);
+								
+								Text text = new Text(ar.getId() + "");
+								text.setBoundsType(TextBoundsType.VISUAL); 
+								StackPane stack = new StackPane();
+								stack.getChildren().addAll(obj, text);
+								
+								stack.setLayoutX(ar.getCoordinates().getX());
+								stack.setLayoutY(ar.getCoordinates().getY());
+								
+								ScaleTransition sctr = new ScaleTransition(Duration.millis(500), stack);
 								sctr.setFromX(0);
 								sctr.setFromY(0);
 								sctr.setToX(1);
@@ -239,12 +260,20 @@ public class ClientController {
 								// obj.setStyle("-fx-border-color: #000000;");
 								obj.setStroke(Paint.valueOf("Black"));
 								obj.setStrokeWidth(1.0);
-								obj.setOnMouseClicked(e -> {
-									System.out.println(own);
+								obj.setOnMousePressed(event -> {
+									if(event.getButton().equals(MouseButton.PRIMARY)) {
+							        	for (Circle c : objectsMap.values()) {
+											c.setStroke(Paint.valueOf("Black"));
+										}
+										obj.setStroke(Paint.valueOf("Red"));
+										objectId.setText(ar.getId() + "");
+										objectName.setText(ar.getName());
+										
+									}
 								});
 								obj.cursorProperty().set(Cursor.DEFAULT);
-								objectGroup.getChildren().add(obj);
-								objectsMap.put(Integer.parseInt(ar[2]), obj);
+								objectGroup.getChildren().add(stack);
+								objectsMap.put(ar.getId(), obj);
 							});
 						}
 					} catch (Exception e) {
@@ -263,5 +292,10 @@ public class ClientController {
 		} catch (InterruptedException | IOException e1) {
 			e1.printStackTrace();
 		}
+	}
+	
+	private void clearInfo() {
+		objectId.clear();
+		objectName.clear();
 	}
 }

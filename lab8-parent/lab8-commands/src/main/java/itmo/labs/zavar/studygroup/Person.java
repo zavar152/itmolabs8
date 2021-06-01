@@ -39,12 +39,14 @@ public class Person implements Serializable {
 		if (name == null || name.isEmpty()) {
 			throw new IllegalArgumentException("Name can't be null or empty");
 		} else {
+			name.replaceAll("/-/", "");
 			this.name = name;
 		}
 
 		if (passportID != null && passportID.isEmpty()) {
 			throw new IllegalArgumentException("Passport ID can't be empty");
 		} else {
+			passportID.replaceAll("/-/", "");
 			this.passportID = passportID;
 		}
 
