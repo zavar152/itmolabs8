@@ -5,6 +5,7 @@ import java.io.PipedInputStream;
 import java.io.StringReader;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Random;
@@ -32,6 +33,7 @@ import javafx.animation.ParallelTransition;
 import javafx.animation.ScaleTransition;
 import javafx.animation.SequentialTransition;
 import javafx.application.Platform;
+import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
@@ -41,11 +43,18 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.SingleSelectionModel;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.Tab;
+import javafx.scene.control.TabPane;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableRow;
+import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
 import javafx.scene.control.ToggleButton;
+import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Paint;
@@ -62,7 +71,7 @@ public class ClientController implements Initializable {
 	private Stack<StudyGroup> stack = new Stack<StudyGroup>(); 
 	
 	@FXML
-	private Tab tabBrowser, tabCommands, tabSettings;
+	private Tab tabBrowser, tabCommands, tabSettings, tabTable;
 	@FXML
 	private AnchorPane browser;
 	@FXML
@@ -76,18 +85,37 @@ public class ClientController implements Initializable {
 	@FXML
 	private ToggleButton darkButton;
 	@FXML
-	private SplitPane infoPane;
+	private SplitPane infoPane, buttonPane;
 	@FXML
 	private ComboBox<String> langComboBox;
+	@FXML
+	private TableView<StudyGroup> objectTable;
+	@FXML
+	private TabPane tabPane;
 	
+	private String login = "zavar";
 	private HashMap<Long, Circle> objectsMap = new HashMap<Long, Circle>();
 	private Group objectGroup = new Group();
 	private ResourceBundle resources;
+	private TableColumn<StudyGroup, Long> idColumn = new TableColumn<>("%column.idColumn");
+	private TableColumn<StudyGroup, String> owner = new TableColumn<>("%column.owner");
+	private TableColumn<StudyGroup, String> nameColumn = new TableColumn<>("%column.nameColumn");
+	private TableColumn<StudyGroup, Double> coordX = new TableColumn<>("%column.coordX");
+	private TableColumn<StudyGroup, Float> coordY = new TableColumn<>("%column.coordY");
+	private TableColumn<StudyGroup, LocalDate> date = new TableColumn<>("%column.date");
+	private TableColumn<StudyGroup, Long> scCount = new TableColumn<>("%column.scCount");
+	private TableColumn<StudyGroup, Integer> exCount = new TableColumn<>("%column.exCount");
+	private TableColumn<StudyGroup, Long> trCount = new TableColumn<>("%column.trCount");
+	private TableColumn<StudyGroup, FormOfEducation> form = new TableColumn<>("%column.form");
 	
 	@Override
     public void initialize(URL location, ResourceBundle res) 
     {	
+		objectTable.setVisible(false);
 		resources = res;
+		
+		prepareTable();
+		setupTableLanguage(resources);
 		
 		langComboBox.getItems().addAll(Launcher.getLangs().keySet());
 		
@@ -109,9 +137,6 @@ public class ClientController implements Initializable {
             content.setPrefSize(newBounds.getWidth(), newBounds.getHeight());
         });
         
-        //ResourceBundle bundle = ResourceBundle.getBundle("langs/lang", new Locale("en", "US"));
-        //showButton.setText(bundle.getString("button.show"));
-        
         darkButton.setOnMouseClicked(e -> {
         	if(!darkButton.isSelected()) {
         		darkButton.setText(resources.getString("button.enableDark"));
@@ -121,6 +146,20 @@ public class ClientController implements Initializable {
         		Launcher.getStage().getScene().getStylesheets().add("css/darkTheme.css");
         	}
         });
+        
+        /*deleteObjButton.setOnMouseClicked(e -> {
+        	infoPane.setDisable(true);
+			Task<Void> task = new Task<Void>() {
+				@Override
+				protected Void call() throws Exception {
+					Launcher.getClient().executeCommand("remove_by_id " + objectId.getText(), new ReaderInputStream(new StringReader(""), StandardCharsets.UTF_8));
+					return null;
+				}
+			};
+			
+			new Thread(task).start();
+			
+        });*/
         
 		showButton.setOnMouseClicked(e -> {
 
@@ -133,7 +172,7 @@ public class ClientController implements Initializable {
 					}
 
 					Launcher.getClient().executeCommand("login",
-							new ReaderInputStream(new StringReader("zavar\n123456789"), StandardCharsets.UTF_8));
+							new ReaderInputStream(new StringReader(login+"\n123456789"), StandardCharsets.UTF_8));
 
 					PipedInputStream pin = Launcher.getClient().getDataInput();
 
@@ -168,6 +207,13 @@ public class ClientController implements Initializable {
 											deleteSt.setOnFinished(e -> {
 												objectGroup.getChildren().remove(circle.getParent());
 											});
+											for (int idx = 0; idx < objectTable.getItems().size(); idx++) {
+											    StudyGroup data = objectTable.getItems().get(idx);
+											    if (data.getId().equals(Long.parseLong(res[1]))) {
+											    	objectTable.getItems().remove(idx);
+											       return;
+											    }
+											}
 										});
 									}
 								}
@@ -181,6 +227,17 @@ public class ClientController implements Initializable {
 				}
 			};
 
+			//Replacing
+			/*
+			 * 											for (int idx = 0; idx < objectTable.getItems().size(); idx++) {
+											    YourData data = objectTable.getItems().get(idx);
+											    if (data.getColumnOne().equals(textToCompare)) {
+											    	objectTable.getItems().set(idx, someOtherData);
+											       return;
+											    }
+											}
+			 */
+			
 			task.setOnRunning(s -> {
 				infoText.setText("Status: Connecting...");
 				scrollPane.setDisable(true);
@@ -220,6 +277,62 @@ public class ClientController implements Initializable {
 		});
     }
 
+	private void prepareTable() {
+		
+		objectTable.setRowFactory(tv -> {
+		    TableRow<StudyGroup> row = new TableRow<>();
+		    row.setOnMouseClicked(event -> {
+		        if (!row.isEmpty() && event.getButton() == MouseButton.PRIMARY && event.getClickCount() == 2) {
+
+		        	StudyGroup clickedRow = row.getItem();
+		            Circle c = objectsMap.get(clickedRow.getId());
+		            c.fireEvent(new MouseEvent(MouseEvent.MOUSE_PRESSED, c.getCenterX(), c.getCenterY(), c.getCenterX(), c.getCenterY(), MouseButton.PRIMARY, 1, true, true, true, true, true, true, true, true, true, true, null));
+		            
+		            SingleSelectionModel<Tab> selectionModel = tabPane.getSelectionModel();
+		            selectionModel.select(tabBrowser);
+		        }
+		    });
+		    return row;
+		});
+		
+	    idColumn.setCellValueFactory(new PropertyValueFactory<>("id"));
+	    owner.setCellValueFactory(data -> new ReadOnlyObjectWrapper<String>(data.getValue().getOwner()));
+	    nameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
+	    coordX.setCellValueFactory(data -> new ReadOnlyObjectWrapper<Double>(data.getValue().getCoordinates().getX()));
+	    coordY.setCellValueFactory(data -> new ReadOnlyObjectWrapper<Float>(data.getValue().getCoordinates().getY()));
+	    date.setCellValueFactory(data -> new ReadOnlyObjectWrapper<LocalDate>(data.getValue().getCreationLocalDate()));
+	    scCount.setCellValueFactory(data -> new ReadOnlyObjectWrapper<Long>(data.getValue().getStudentsCount()));
+	    exCount.setCellValueFactory(data -> new ReadOnlyObjectWrapper<Integer>(data.getValue().getExpelledStudents()));
+	    trCount.setCellValueFactory(data -> new ReadOnlyObjectWrapper<Long>(data.getValue().getTransferredStudents()));
+	    form.setCellValueFactory(data -> new ReadOnlyObjectWrapper<FormOfEducation>(data.getValue().getFormOfEducation()));
+	    
+	    idColumn.setPrefWidth(50);
+	    owner.setPrefWidth(70);
+	    nameColumn.setPrefWidth(150);
+		coordX.setPrefWidth(50);
+		coordY.setPrefWidth(50);
+		date.setPrefWidth(100);
+		scCount.setPrefWidth(150);
+		exCount.setPrefWidth(180);
+		trCount.setPrefWidth(180);
+		form.setPrefWidth(150);
+	    
+	    objectTable.getColumns().add(idColumn);
+	    objectTable.getColumns().add(owner);
+	    objectTable.getColumns().add(nameColumn);
+	    objectTable.getColumns().add(coordX);
+	    objectTable.getColumns().add(coordY);
+	    objectTable.getColumns().add(date);
+	    objectTable.getColumns().add(scCount);
+	    objectTable.getColumns().add(exCount);
+	    objectTable.getColumns().add(trCount);
+	    objectTable.getColumns().add(form);
+	    
+	    objectTable.setOnMouseClicked(e -> {
+	    
+	    });
+	}
+
 	private StudyGroup generateStydyGroup(String s, String own) throws IOException {
 		beanReader = new CsvBeanReader(new StringReader(s), CsvPreference.EXCEL_NORTH_EUROPE_PREFERENCE);
 		// beanReader.getHeader(true);
@@ -230,6 +343,7 @@ public class ClientController implements Initializable {
 			out = temp;//new String[] {temp.getCoordinates().getX() + "", temp.getCoordinates().getY()  + "", temp.getId() + "", temp.getStudentsCount() + ""};
 		}
 		beanReader.close();
+		out.setOwner(own);
 		return out;
 	}
 	
@@ -302,13 +416,19 @@ public class ClientController implements Initializable {
 										objectId.setText(ar.getId() + "");
 										objectName.setText(ar.getName());
 										infoPane.setDisable(false);
+										if(!ar.getOwner().equals(login))
+											buttonPane.setDisable(true);
+										else
+											buttonPane.setDisable(false);
 									}
 								});
 								obj.cursorProperty().set(Cursor.DEFAULT);
 								objectGroup.getChildren().add(stack);
+								objectTable.getItems().add(ar);
 								objectsMap.put(ar.getId(), obj);
 							});
 						}
+						objectTable.setVisible(true);
 					} catch (Exception e) {
 						e.printStackTrace();
 					}
@@ -331,6 +451,7 @@ public class ClientController implements Initializable {
 		tabBrowser.setText(resource.getString("tab.browser"));
 		tabCommands.setText(resource.getString("tab.commands"));
 		tabSettings.setText(resource.getString("tab.settings"));
+		tabTable.setText(resource.getString("tab.table"));
 		
 		showButton.setText(resource.getString("button.show"));
 		if(!darkButton.isSelected()) {
@@ -346,6 +467,21 @@ public class ClientController implements Initializable {
 		
 		langText.setText(resource.getString("text.lang"));
 		darkmodeText.setText(resource.getString("text.darkmode"));
+		
+		setupTableLanguage(resource);
+	}
+	
+	private void setupTableLanguage(ResourceBundle resource) {
+		idColumn.setText(resource.getString("column.idColumn"));
+		owner.setText(resource.getString("column.owner"));
+		nameColumn.setText(resource.getString("column.nameColumn"));
+		coordX.setText(resource.getString("column.coordX"));
+		coordY.setText(resource.getString("column.coordY"));
+		date.setText(resource.getString("column.date"));
+		scCount.setText(resource.getString("column.scCount"));
+		exCount.setText(resource.getString("column.exCount"));
+		trCount.setText(resource.getString("column.trCount"));
+		form.setText(resource.getString("column.form"));
 	}
 	
 	private void clearInfo() {

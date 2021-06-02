@@ -27,6 +27,7 @@ public class StudyGroup implements Comparable<StudyGroup>, Serializable {
 	private long transferredStudents;
 	private FormOfEducation formOfEducation;
 	private Person groupAdmin;
+	private String owner;
 
 	/**
 	 * Default constructor uses for csv parser. Don't use it to create objects.
@@ -139,6 +140,14 @@ public class StudyGroup implements Comparable<StudyGroup>, Serializable {
 		return studentsCount;
 	}
 
+	public void setOwner(String owner) {
+		this.owner = owner;
+	}
+	
+	public String getOwner() {
+		return owner;
+	}
+	
 	public void setStudentsCount(Long studentsCount) {
 		if (studentsCount == null || studentsCount <= 0) {
 			throw new IllegalArgumentException("Students count should be greater than 0 and can't be null");

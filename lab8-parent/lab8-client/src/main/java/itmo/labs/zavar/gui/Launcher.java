@@ -14,7 +14,7 @@ import java.util.stream.Stream;
 
 import itmo.labs.zavar.client.Client;
 import itmo.labs.zavar.client.util.ClientState;
-import itmo.labs.zavar.client.util.ErrorWindow;
+import itmo.labs.zavar.gui.util.GUIUtils;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.concurrent.Task;
@@ -74,7 +74,7 @@ public class Launcher extends Application{
 		    	if(!e.getFileName().toString().equals("langs.properties")) {
 		    		String loc = e.getFileName().toString().replaceAll("lang_", "").replaceAll(".properties", "");
 		    		if(!langsFile.values().contains(loc)) {
-		    			ErrorWindow.show("Check your langs files!");
+		    			GUIUtils.showError("Check your langs files!");
 		    			try {
 		    				stop();
 		    			} catch (Exception e1) {}
@@ -116,7 +116,7 @@ public class Launcher extends Application{
 		});
 		
 		clientInit.setOnFailed(e -> {
-			ErrorWindow.show("Connection failed");
+			GUIUtils.showError("Connection failed");
 			try {
 				stop();
 			} catch (Exception e1) {}
@@ -148,7 +148,7 @@ public class Launcher extends Application{
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
-			ErrorWindow.show(e, "Error on start");
+			GUIUtils.showError(e, "Error on start");
 		}
 	}
 	
