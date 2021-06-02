@@ -1,0 +1,7 @@
+ .root {
+     -fx-base: darkslategray;
+ }
+
+ Text {
+     -fx-stroke: white;
+ }

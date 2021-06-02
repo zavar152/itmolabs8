@@ -38,9 +38,13 @@ import javafx.fxml.Initializable;
 import javafx.scene.Cursor;
 import javafx.scene.Group;
 import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.SplitPane;
+import javafx.scene.control.Tab;
 import javafx.scene.control.TextField;
+import javafx.scene.control.ToggleButton;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.StackPane;
@@ -58,22 +62,41 @@ public class ClientController implements Initializable {
 	private Stack<StudyGroup> stack = new Stack<StudyGroup>(); 
 	
 	@FXML
+	private Tab tabBrowser, tabCommands, tabSettings;
+	@FXML
 	private AnchorPane browser;
 	@FXML
 	private ScrollPane scrollPane;
 	@FXML
-	private Label infoText;
+	private Label infoText, objectIdText, objectNameText, langText, darkmodeText;
 	@FXML
-	private Button showButton, langButton;
+	private Button showButton, updateObjButton, deleteObjButton;
 	@FXML
 	private TextField objectName, objectId;
+	@FXML
+	private ToggleButton darkButton;
+	@FXML
+	private SplitPane infoPane;
+	@FXML
+	private ComboBox<String> langComboBox;
 	
 	private HashMap<Long, Circle> objectsMap = new HashMap<Long, Circle>();
 	private Group objectGroup = new Group();
+	private ResourceBundle resources;
 	
 	@Override
-    public void initialize(URL location, ResourceBundle resources) 
-    {
+    public void initialize(URL location, ResourceBundle res) 
+    {	
+		resources = res;
+		
+		langComboBox.getItems().addAll(Launcher.getLangs().keySet());
+		
+		langComboBox.setOnAction(e -> {
+			String[] locale = Launcher.getLangs().get(langComboBox.getValue()).split("_");
+			resources = ResourceBundle.getBundle("langs/lang", new Locale(locale[0], locale[1]));
+			setupLanguage(resources);
+		});
+		
         StackPane content = new StackPane(objectGroup);
         objectGroup.layoutBoundsProperty().addListener((observable, oldBounds, newBounds) -> {
             content.setMinWidth(newBounds.getWidth());
@@ -86,9 +109,17 @@ public class ClientController implements Initializable {
             content.setPrefSize(newBounds.getWidth(), newBounds.getHeight());
         });
         
-        langButton.setOnMouseClicked(e -> {
-        	ResourceBundle bundle = ResourceBundle.getBundle("langs/lang", new Locale("en", "US"));
-        	showButton.setText(bundle.getString("button.show"));
+        //ResourceBundle bundle = ResourceBundle.getBundle("langs/lang", new Locale("en", "US"));
+        //showButton.setText(bundle.getString("button.show"));
+        
+        darkButton.setOnMouseClicked(e -> {
+        	if(!darkButton.isSelected()) {
+        		darkButton.setText(resources.getString("button.enableDark"));
+        		Launcher.getStage().getScene().getStylesheets().remove("css/darkTheme.css");
+        	} else {
+        		darkButton.setText(resources.getString("button.disableDark"));
+        		Launcher.getStage().getScene().getStylesheets().add("css/darkTheme.css");
+        	}
         });
         
 		showButton.setOnMouseClicked(e -> {
@@ -131,6 +162,7 @@ public class ClientController implements Initializable {
 								        deleteSt.getChildren().addAll(sctr);
 										
 										Platform.runLater(() -> {
+											infoPane.setDisable(true);
 											clearInfo();
 											deleteSt.play();
 											deleteSt.setOnFinished(e -> {
@@ -242,6 +274,7 @@ public class ClientController implements Initializable {
 								
 								Text text = new Text(ar.getId() + "");
 								text.setBoundsType(TextBoundsType.VISUAL); 
+								text.setMouseTransparent(true);
 								StackPane stack = new StackPane();
 								stack.getChildren().addAll(obj, text);
 								
@@ -268,7 +301,7 @@ public class ClientController implements Initializable {
 										obj.setStroke(Paint.valueOf("Red"));
 										objectId.setText(ar.getId() + "");
 										objectName.setText(ar.getName());
-										
+										infoPane.setDisable(false);
 									}
 								});
 								obj.cursorProperty().set(Cursor.DEFAULT);
@@ -292,6 +325,27 @@ public class ClientController implements Initializable {
 		} catch (InterruptedException | IOException e1) {
 			e1.printStackTrace();
 		}
+	}
+	
+	private void setupLanguage(ResourceBundle resource) {
+		tabBrowser.setText(resource.getString("tab.browser"));
+		tabCommands.setText(resource.getString("tab.commands"));
+		tabSettings.setText(resource.getString("tab.settings"));
+		
+		showButton.setText(resource.getString("button.show"));
+		if(!darkButton.isSelected()) {
+    		darkButton.setText(resources.getString("button.enableDark"));
+    	} else {
+    		darkButton.setText(resources.getString("button.disableDark"));
+    	}
+		updateObjButton.setText(resource.getString("button.update"));
+		deleteObjButton.setText(resource.getString("button.delete"));
+		
+		objectIdText.setText(resource.getString("object.id"));
+		objectNameText.setText(resource.getString("object.name"));
+		
+		langText.setText(resource.getString("text.lang"));
+		darkmodeText.setText(resource.getString("text.darkmode"));
 	}
 	
 	private void clearInfo() {
