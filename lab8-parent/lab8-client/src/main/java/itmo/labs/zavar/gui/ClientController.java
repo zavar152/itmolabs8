@@ -42,6 +42,7 @@ import javafx.scene.Group;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
+import javafx.scene.control.PasswordField;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.SingleSelectionModel;
 import javafx.scene.control.SplitPane;
@@ -51,6 +52,7 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TitledPane;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.input.MouseButton;
@@ -71,17 +73,19 @@ public class ClientController implements Initializable {
 	private Stack<StudyGroup> stack = new Stack<StudyGroup>(); 
 	
 	@FXML
-	private Tab tabBrowser, tabCommands, tabSettings, tabTable;
+	private Tab tabBrowser, tabCommands, tabSettings, tabTable, tabAccount;
 	@FXML
 	private AnchorPane browser;
 	@FXML
 	private ScrollPane scrollPane;
 	@FXML
-	private Label infoText, objectIdText, objectNameText, langText, darkmodeText;
+	private Label infoText, objectIdText, objectNameText, langText, darkmodeText, loginInfoText, accountText, loginText, passwordText;
 	@FXML
-	private Button showButton, updateObjButton, deleteObjButton;
+	private Button showButton, updateObjButton, deleteObjButton, loginButton, registerButton;
 	@FXML
-	private TextField objectName, objectId;
+	private TextField objectName, objectId, loginField;
+	@FXML
+	private PasswordField passwordField;
 	@FXML
 	private ToggleButton darkButton;
 	@FXML
@@ -92,8 +96,10 @@ public class ClientController implements Initializable {
 	private TableView<StudyGroup> objectTable;
 	@FXML
 	private TabPane tabPane;
+	@FXML
+	private TitledPane accountPane;
 	
-	private String login = "zavar";
+	private String login;
 	private HashMap<Long, Circle> objectsMap = new HashMap<Long, Circle>();
 	private Group objectGroup = new Group();
 	private ResourceBundle resources;
@@ -107,6 +113,7 @@ public class ClientController implements Initializable {
 	private TableColumn<StudyGroup, Integer> exCount = new TableColumn<>("%column.exCount");
 	private TableColumn<StudyGroup, Long> trCount = new TableColumn<>("%column.trCount");
 	private TableColumn<StudyGroup, FormOfEducation> form = new TableColumn<>("%column.form");
+	private boolean isTriggersDone = false;
 	
 	@Override
     public void initialize(URL location, ResourceBundle res) 
@@ -161,7 +168,7 @@ public class ClientController implements Initializable {
 			
         });*/
         
-		showButton.setOnMouseClicked(e -> {
+        loginButton.setOnMouseClicked(e -> {
 
 			Task<Void> task = new Task<Void>() {
 				@Override
@@ -171,62 +178,23 @@ public class ClientController implements Initializable {
 						Thread.sleep(100);
 					}
 
-					Launcher.getClient().executeCommand("login",
-							new ReaderInputStream(new StringReader(login+"\n123456789"), StandardCharsets.UTF_8));
-
-					PipedInputStream pin = Launcher.getClient().getDataInput();
-
-					Task<Void> task = new Task<Void>() {
-						@Override
-						protected Void call() throws Exception {
-							@SuppressWarnings("resource")
-							Scanner sc = new Scanner(pin);
-							while (true) {
-								if (sc.hasNext()) {
-									String a = sc.next();
-									System.out.println(a);
-									String[] res = a.split(";");
-									if (res[0].equals("DELETE")) {
-										
-										Circle circle = objectsMap.get(Long.parseLong(res[1]));
-										
-										ScaleTransition sctr = new ScaleTransition(Duration.millis(2000), circle.getParent());
-								        sctr.setToX(0);
-								        sctr.setToY(0);
-								        sctr.setFromX(1);
-								        sctr.setFromY(1);
-								        sctr.setCycleCount(1);
-								        sctr.setAutoReverse(true);
-								        SequentialTransition deleteSt = new SequentialTransition();
-								        deleteSt.getChildren().addAll(sctr);
-										
-										Platform.runLater(() -> {
-											infoPane.setDisable(true);
-											clearInfo();
-											deleteSt.play();
-											deleteSt.setOnFinished(e -> {
-												objectGroup.getChildren().remove(circle.getParent());
-											});
-											for (int idx = 0; idx < objectTable.getItems().size(); idx++) {
-											    StudyGroup data = objectTable.getItems().get(idx);
-											    if (data.getId().equals(Long.parseLong(res[1]))) {
-											    	objectTable.getItems().remove(idx);
-											       return;
-											    }
-											}
-										});
-									}
-								}
-							}
-						}
-					};
-
-					new Thread(task).start();
+					if(loginField.getText().length() <= 4) {
+						Platform.runLater(() -> {
+							loginInfoText.setText("Login should be longer than 4 characters");
+						});
+						cancel();
+					} else if(passwordField.getText().length() <= 8) {
+						Platform.runLater(() -> {
+							loginInfoText.setText("Password should be longer than 8 characters");
+						});
+						cancel();
+					} else
+						Launcher.getClient().executeCommand("login", new ReaderInputStream(new StringReader(loginField.getText() + "\n" + passwordField.getText()), StandardCharsets.UTF_8));
 
 					return null;
 				}
 			};
-
+			
 			//Replacing
 			/*
 			 * 											for (int idx = 0; idx < objectTable.getItems().size(); idx++) {
@@ -238,9 +206,13 @@ public class ClientController implements Initializable {
 											}
 			 */
 			
+			task.setOnCancelled(e3 -> {
+				infoText.setText("Status: Login failed");
+			});
+			
 			task.setOnRunning(s -> {
 				infoText.setText("Status: Connecting...");
-				scrollPane.setDisable(true);
+				//scrollPane.setDisable(true);
 			});
 
 			task.setOnSucceeded(s -> {
@@ -251,12 +223,27 @@ public class ClientController implements Initializable {
 						try {
 							Scanner sc = new Scanner(Launcher.getClient().getAnswerInput());
 							while (sc.hasNext()) {
-								if(sc.nextLine().equals("loginDone"))
+								String f = sc.nextLine();
+								if(f.equals("loginDone")) {
+									Platform.runLater(() -> {
+										loginInfoText.setText("");
+										objectTable.getItems().clear();
+										objectsMap.clear();
+										objectGroup.getChildren().clear();
+										login = loginField.getText();
+										accountText.setText(login);
+										prepareObjectBrowser();
+										prepareTriggers();
+										isTriggersDone = true;
+									});
 									break;
+								} else {
+									Platform.runLater(() -> {
+										loginInfoText.setText(f);
+									});
+									cancel();
+								}
 							}
-						Platform.runLater(() -> {
-							prepareObjectBrowser();
-						});
 						} catch(Exception e) {
 							e.printStackTrace();
 						}
@@ -266,8 +253,16 @@ public class ClientController implements Initializable {
 				new Thread(task2).start();
 
 				task2.setOnSucceeded(e2 -> {
-					scrollPane.setDisable(false);
+					//scrollPane.setDisable(false);
 					infoText.setText("Status: Ready");
+				});
+				
+				task2.setOnCancelled(e3 -> {
+					infoText.setText("Status: Login failed");
+				});
+				
+				task2.setOnFailed(e3 -> {
+					infoText.setText("Status: Login failed");
 				});
 
 			});
@@ -275,6 +270,37 @@ public class ClientController implements Initializable {
 			new Thread(task).start();
 
 		});
+        
+        registerButton.setOnMouseClicked(e -> {
+
+			Task<Void> task = new Task<Void>() {
+				@Override
+				protected Void call() throws Exception {
+
+					while (!Launcher.getClient().isConnected()) {
+						Thread.sleep(100);
+					}
+
+					if(loginField.getText().length() <= 4) {
+						Platform.runLater(() -> {
+							loginInfoText.setText("Login should be longer than 4 characters");
+						});
+						cancel();
+					} else if(passwordField.getText().length() <= 8) {
+						Platform.runLater(() -> {
+							loginInfoText.setText("Password should be longer than 8 characters");
+						});
+						cancel();
+					} else
+						Launcher.getClient().executeCommand("register", new ReaderInputStream(new StringReader(loginField.getText() + "\n" + passwordField.getText()), StandardCharsets.UTF_8));
+
+					return null;
+				}
+			};
+        });
+        
+        
+        
     }
 
 	private void prepareTable() {
@@ -452,6 +478,7 @@ public class ClientController implements Initializable {
 		tabCommands.setText(resource.getString("tab.commands"));
 		tabSettings.setText(resource.getString("tab.settings"));
 		tabTable.setText(resource.getString("tab.table"));
+		tabAccount.setText(resource.getString("tab.account"));
 		
 		showButton.setText(resource.getString("button.show"));
 		if(!darkButton.isSelected()) {
@@ -461,12 +488,18 @@ public class ClientController implements Initializable {
     	}
 		updateObjButton.setText(resource.getString("button.update"));
 		deleteObjButton.setText(resource.getString("button.delete"));
+		registerButton.setText(resource.getString("button.register"));
+		loginButton.setText(resource.getString("button.login"));
 		
 		objectIdText.setText(resource.getString("object.id"));
 		objectNameText.setText(resource.getString("object.name"));
 		
 		langText.setText(resource.getString("text.lang"));
 		darkmodeText.setText(resource.getString("text.darkmode"));
+		
+		accountPane.setText(resource.getString("account.text"));
+		loginText.setText(resource.getString("account.login"));
+		passwordText.setText(resource.getString("account.password"));
 		
 		setupTableLanguage(resource);
 	}
@@ -487,5 +520,56 @@ public class ClientController implements Initializable {
 	private void clearInfo() {
 		objectId.clear();
 		objectName.clear();
+	}
+	
+	private void prepareTriggers() {
+		PipedInputStream pin = Launcher.getClient().getDataInput();
+
+		Task<Void> task = new Task<Void>() {
+			@Override
+			protected Void call() throws Exception {
+				@SuppressWarnings("resource")
+				Scanner sc = new Scanner(pin);
+				while (true) {
+					if (sc.hasNext()) {
+						String a = sc.next();
+						System.out.println(a);
+						String[] res = a.split(";");
+						if (res[0].equals("DELETE")) {
+							
+							Circle circle = objectsMap.get(Long.parseLong(res[1]));
+							
+							ScaleTransition sctr = new ScaleTransition(Duration.millis(2000), circle.getParent());
+					        sctr.setToX(0);
+					        sctr.setToY(0);
+					        sctr.setFromX(1);
+					        sctr.setFromY(1);
+					        sctr.setCycleCount(1);
+					        sctr.setAutoReverse(true);
+					        SequentialTransition deleteSt = new SequentialTransition();
+					        deleteSt.getChildren().addAll(sctr);
+							
+							Platform.runLater(() -> {
+								infoPane.setDisable(true);
+								clearInfo();
+								deleteSt.play();
+								deleteSt.setOnFinished(e -> {
+									objectGroup.getChildren().remove(circle.getParent());
+								});
+								for (int idx = 0; idx < objectTable.getItems().size(); idx++) {
+								    StudyGroup data = objectTable.getItems().get(idx);
+								    if (data.getId().equals(Long.parseLong(res[1]))) {
+								    	objectTable.getItems().remove(idx);
+								       return;
+								    }
+								}
+							});
+						}
+					}
+				}
+			}
+		};
+
+		new Thread(task).start();
 	}
 }
