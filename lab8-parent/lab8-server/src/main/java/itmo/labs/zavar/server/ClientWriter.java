@@ -5,7 +5,6 @@ import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousSocketChannel;
-import java.util.Base64;
 import java.util.concurrent.ExecutionException;
 
 import itmo.labs.zavar.commands.base.net.CommandAnswer;
@@ -16,10 +15,11 @@ public class ClientWriter {
 		ByteArrayOutputStream stream = new ByteArrayOutputStream();
 		ObjectOutputStream ser = new ObjectOutputStream(stream);
 		ser.writeObject(new CommandAnswer(new String(outBuffer.array()), login, data));//new String(outBuffer.array()));
-		String str = Base64.getMimeEncoder().encodeToString(stream.toByteArray());
+		//String str = Base64.getMimeEncoder().encodeToString(stream.toByteArray());
+		byte[] str = stream.toByteArray();
 		ser.close();
 		stream.close();
-		asyncChannel.write(ByteBuffer.wrap(str.getBytes())).get();
+		asyncChannel.write(ByteBuffer.wrap(str)).get();
 	}
 
 }

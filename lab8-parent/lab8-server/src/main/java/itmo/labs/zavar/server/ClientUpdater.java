@@ -78,13 +78,15 @@ public class ClientUpdater implements Runnable {
 						}
 						
 						
+						
 						ListIterator<ClientHandler> iter = clients.listIterator();
 
 						while (iter.hasNext()) {
 							ClientHandler handler = iter.next();
 							if (handler.isOpen()) {
-								handler.addOutput(res);
-								handler.writeToClient(ByteBuffer.allocate(0));
+								logger.info(res);
+								//handler.addOutput(res);
+								handler.writeToClient(ByteBuffer.allocate(0), res);
 							} else {
 								iter.remove();
 							}

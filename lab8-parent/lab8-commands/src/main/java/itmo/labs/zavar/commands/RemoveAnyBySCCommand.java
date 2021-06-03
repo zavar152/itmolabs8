@@ -14,7 +14,6 @@ import itmo.labs.zavar.commands.base.Environment;
 import itmo.labs.zavar.db.DbUtils;
 import itmo.labs.zavar.exception.CommandArgumentException;
 import itmo.labs.zavar.exception.CommandException;
-import itmo.labs.zavar.exception.CommandPermissionException;
 import itmo.labs.zavar.exception.CommandRunningException;
 import itmo.labs.zavar.exception.CommandSQLException;
 
@@ -72,9 +71,7 @@ public class RemoveAnyBySCCommand extends Command {
 							((PrintStream) outStream).println("No such element!");
 						} else {
 							do {
-								if (!rs.getString(1).equals(env.getUser(type.equals(ExecutionType.INTERNAL_CLIENT) ? "internal" : (String) args[args.length - 1]))) {
-									throw new CommandPermissionException();
-								} else {
+								if (rs.getString(1).equals(env.getUser(type.equals(ExecutionType.INTERNAL_CLIENT) ? "internal" : (String) args[args.length - 1]))) {
 									stmt = con.prepareStatement(DbUtils.deleteBySc(sc));
 									stmt.executeUpdate();
 									d++;
@@ -82,8 +79,6 @@ public class RemoveAnyBySCCommand extends Command {
 							} while (rs.next());
 						}
 						((PrintStream) outStream).println(d + " deleted!");
-					} catch (CommandPermissionException e) {
-						throw new CommandException(e.getMessage());
 					} catch (Exception e) {
 						throw new CommandRunningException("Unexcepted error! " + e.getMessage());
 					} finally {

@@ -7,7 +7,6 @@ import java.io.Writer;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
-import java.util.Base64;
 
 import itmo.labs.zavar.commands.base.net.CommandAnswer;
 
@@ -39,7 +38,7 @@ public class ReaderThread implements Runnable{
 				for (int i = 0; i < bytesRead; i++) {
 					b[i] = buf.get();
 				}
-				ByteArrayInputStream stream2 = new ByteArrayInputStream(Base64.getMimeDecoder().decode(b));
+				ByteArrayInputStream stream2 = new ByteArrayInputStream(b);//Base64.getMimeDecoder().decode(b));
 				ObjectInputStream obj = new ObjectInputStream(stream2);
 				CommandAnswer per = (CommandAnswer) obj.readObject();
 				if (per.getAnswer().contains("true")) {
@@ -65,6 +64,7 @@ public class ReaderThread implements Runnable{
 				buf.clear();
 			} catch (SocketException | NegativeArraySizeException e) {
 				isConnected = false;
+				//e.printStackTrace();
 				break;
 			} catch (Exception e) {
 				e.printStackTrace();

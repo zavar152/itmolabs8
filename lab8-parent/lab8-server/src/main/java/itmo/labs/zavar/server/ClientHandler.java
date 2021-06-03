@@ -9,6 +9,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.Future;
+import java.util.concurrent.Semaphore;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -25,12 +26,14 @@ public class ClientHandler implements Callable<String> {
 	private Logger logger = LogManager.getLogger(ClientHandler.class.getName());
 	private ArrayList<Object> outputs = new ArrayList<Object>();
 	private String login, host;
+	private Semaphore semaphore;
 	
 	public ClientHandler(AsynchronousSocketChannel asyncChannel, Environment clientEnv, ExecutorService clientExecutor, ForkJoinPool clientWriter) {
 		this.asyncChannel = asyncChannel;
 		this.clientEnv = clientEnv;
 		this.clientExecutor = clientExecutor;
 		this.clientWriter = clientWriter;
+		semaphore = new Semaphore(1, true);
 	}
 
 	@Override
@@ -81,15 +84,16 @@ public class ClientHandler implements Callable<String> {
 		outputs.add(buf);
 	}
 	
-	public synchronized void writeToClient(ByteBuffer outBuffer) {
+	public void writeToClient(ByteBuffer outBuffer, Object ... buf) {
 		clientWriter.submit(() -> {
 			try {
-				ClientWriter.write(asyncChannel, outBuffer, login, outputs.toArray());
+				semaphore.acquire();
+				ClientWriter.write(asyncChannel, outBuffer, login, buf);
 			} catch (InterruptedException | ExecutionException | IOException e) {
 				e.printStackTrace();
 				logger.error("Error while writing output to " + host);
 			}
-			outputs.clear();
+			semaphore.release();
 		});
 	}
 	
