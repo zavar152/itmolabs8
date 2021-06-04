@@ -27,6 +27,7 @@ import org.supercsv.prefs.CsvPreference;
 
 import itmo.labs.zavar.client.util.ParseCoordinates;
 import itmo.labs.zavar.client.util.ParsePerson;
+import itmo.labs.zavar.gui.util.GUIUtils;
 import itmo.labs.zavar.studygroup.FormOfEducation;
 import itmo.labs.zavar.studygroup.StudyGroup;
 import javafx.animation.ParallelTransition;
@@ -113,6 +114,7 @@ public class ClientController implements Initializable {
 	private TableColumn<StudyGroup, Integer> exCount = new TableColumn<>("%column.exCount");
 	private TableColumn<StudyGroup, Long> trCount = new TableColumn<>("%column.trCount");
 	private TableColumn<StudyGroup, FormOfEducation> form = new TableColumn<>("%column.form");
+	@SuppressWarnings("unused")
 	private boolean isTriggersDone = false;
 	
 	@Override
@@ -124,11 +126,22 @@ public class ClientController implements Initializable {
 			if(Launcher.getClient().getConnectedProperty().get()) {
 				
 			} else {
-				try {
-					Launcher.getClient().reconnect(true);
-				} catch (InterruptedException | IOException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
+				if (!Launcher.isStop()) {
+					mainPane.setDisable(true);
+
+					Platform.runLater(() -> {
+						GUIUtils.showError("Server connection is lost! You should wait.");
+						objectTable.getItems().clear();
+						objectsMap.clear();
+						objectGroup.getChildren().clear();
+					});
+
+					try {
+						Launcher.getClient().reconnect(true);
+						mainPane.setDisable(false);
+					} catch (InterruptedException | IOException e1) {
+						e1.printStackTrace();
+					}
 				}
 			}
 		});

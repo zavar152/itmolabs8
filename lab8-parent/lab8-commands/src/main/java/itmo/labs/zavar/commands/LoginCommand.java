@@ -111,14 +111,14 @@ public class LoginCommand extends Command {
 									pr.println("Login successful!");
 								LogManager.getLogger(LoginCommand.class.getName()).info("Login successful, host - " + args[args.length-1] + ", user - " + login);
 							} else {
-								pr.println("You are already logged in!false");
+								pr.println("You are already logged in!");
 							}
 							
 						} else {
-							pr.println("Incorrect password!false");
+							pr.println("Incorrect password!");
 						}
 					} else {
-						pr.println("User not found!false");
+						pr.println("User not found!");
 					}
 				} catch (SQLException e) {
 					throw new CommandSQLException(e.getMessage());

@@ -27,6 +27,7 @@ import javafx.stage.StageStyle;
 public class Launcher extends Application{
 
 	private static Client client;
+	private static boolean stopFlag = false;
 	private Task<Void> clientInit;
 	private Stage splashStage;
 	private static Stage mainStage;
@@ -45,6 +46,7 @@ public class Launcher extends Application{
 	
 	@Override
 	public void stop() throws Exception {
+		stopFlag = true;
 		client.close();
 		Platform.exit();
 		System.exit(0);
@@ -74,7 +76,7 @@ public class Launcher extends Application{
 		    	if(!e.getFileName().toString().equals("langs.properties")) {
 		    		String loc = e.getFileName().toString().replaceAll("lang_", "").replaceAll(".properties", "");
 		    		if(!langsFile.values().contains(loc)) {
-		    			GUIUtils.showError("Check your langs files!");
+		    			GUIUtils.showAndWaitError("Check your langs files!");
 		    			try {
 		    				stop();
 		    			} catch (Exception e1) {}
@@ -116,7 +118,7 @@ public class Launcher extends Application{
 		});
 		
 		clientInit.setOnFailed(e -> {
-			GUIUtils.showError("Connection failed");
+			GUIUtils.showAndWaitError("Connection failed");
 			try {
 				stop();
 			} catch (Exception e1) {}
@@ -158,5 +160,9 @@ public class Launcher extends Application{
 
 	public static Stage getStage() {
 		return mainStage;
+	}
+
+	public static boolean isStop() {
+		return stopFlag;
 	}
 }

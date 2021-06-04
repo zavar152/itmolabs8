@@ -124,6 +124,13 @@ public class Client {
 		return lastSent;
 	}
 	
+	public void shutdown() throws IOException {
+		//getConnectedProperty().
+		if(socket != null && !socket.isClosed()) {
+			socket.close();
+		}
+	} 
+	
 	public void close() throws IOException {
 		if(socket != null && !socket.isClosed()) {
 			connected = false;
@@ -132,7 +139,6 @@ public class Client {
 	}
 	
 	public void connect() throws InterruptedException, IOException {
-		System.out.println("try");
 		if (!connected) {
 			clientState = ClientState.CONNECTING;
 			while (!connected) {
@@ -256,6 +262,14 @@ public class Client {
 			}
 		}
 
+		dpin = new PipedInputStream();
+		pout = new PipedOutputStream(dpin);
+		pwriter = new OutputStreamWriter(pout, StandardCharsets.US_ASCII);
+
+		apin = new PipedInputStream();
+		apout = new PipedOutputStream(apin);
+		ansWriter = new OutputStreamWriter(apout, StandardCharsets.US_ASCII);
+		
 		is = socket.getInputStream();
 		os = socket.getOutputStream();
 		writer = new OutputStreamWriter(os, StandardCharsets.US_ASCII);
