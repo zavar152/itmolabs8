@@ -75,7 +75,7 @@ public class ClientController implements Initializable {
 	@FXML
 	private Tab tabBrowser, tabCommands, tabSettings, tabTable, tabAccount;
 	@FXML
-	private AnchorPane browser;
+	private AnchorPane browser, mainPane;
 	@FXML
 	private ScrollPane scrollPane;
 	@FXML
@@ -118,6 +118,22 @@ public class ClientController implements Initializable {
 	@Override
     public void initialize(URL location, ResourceBundle res) 
     {	
+		
+		Launcher.getClient().getConnectedProperty().addListener(e -> {
+			System.out.println(Launcher.getClient().getConnectedProperty().get());
+			if(Launcher.getClient().getConnectedProperty().get()) {
+				
+			} else {
+				try {
+					Launcher.getClient().reconnect(true);
+				} catch (InterruptedException | IOException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+			}
+		});
+		
+		
 		objectTable.setVisible(false);
 		resources = res;
 		

@@ -9,6 +9,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
 
 import itmo.labs.zavar.commands.base.net.CommandAnswer;
+import javafx.beans.property.SimpleBooleanProperty;
 
 public class ReaderThread implements Runnable{
 
@@ -18,6 +19,7 @@ public class ReaderThread implements Runnable{
 	private String data, ans;
 	private PrintWriter dataOut;
 	private PrintWriter ansOut;
+	private static SimpleBooleanProperty check = new SimpleBooleanProperty(false);
 	
 	public ReaderThread(ReadableByteChannel channel, ByteBuffer buf, Writer pwriter, Writer ansOut) {
 		this.channel = channel;
@@ -26,9 +28,14 @@ public class ReaderThread implements Runnable{
 		dataOut = new PrintWriter(pwriter, true);
 	}
 
+	public static SimpleBooleanProperty getConnectedProperty(){
+		return check;
+	}
+	
 	@Override
 	public void run() {
 		isConnected = true;
+		check.set(true);
 		while (true) {
 			try {
 				buf.rewind();
@@ -64,6 +71,7 @@ public class ReaderThread implements Runnable{
 				buf.clear();
 			} catch (SocketException | NegativeArraySizeException e) {
 				isConnected = false;
+				check.set(false);
 				//e.printStackTrace();
 				break;
 			} catch (Exception e) {

@@ -46,6 +46,7 @@ import itmo.labs.zavar.commands.base.Command.ExecutionType;
 import itmo.labs.zavar.commands.base.Environment;
 import itmo.labs.zavar.exception.CommandException;
 import itmo.labs.zavar.exception.CommandPermissionException;
+import javafx.beans.property.SimpleBooleanProperty;
 
 public class Client {
 	
@@ -95,6 +96,10 @@ public class Client {
 		env = new Environment(commandsMap);
 	}
 	
+	public SimpleBooleanProperty getConnectedProperty() {
+		return rdThread.getConnectedProperty();
+	}
+	
 	public PipedInputStream getDataInput() {
 		return dpin;
 	}
@@ -120,11 +125,14 @@ public class Client {
 	}
 	
 	public void close() throws IOException {
-		if(socket != null && !socket.isClosed())
+		if(socket != null && !socket.isClosed()) {
+			connected = false;
 			socket.close();
+		}
 	}
 	
 	public void connect() throws InterruptedException, IOException {
+		System.out.println("try");
 		if (!connected) {
 			clientState = ClientState.CONNECTING;
 			while (!connected) {
@@ -233,7 +241,9 @@ public class Client {
 		}
 	}
 	
-	public void reconnect() throws InterruptedException, IOException {
+	public void reconnect(boolean afterLostConnection) throws InterruptedException, IOException {
+		if(afterLostConnection)
+			connected = false;
 		while (!connected) {
 			try {
 				socket = new Socket(args[0], Integer.parseInt(args[1]));
