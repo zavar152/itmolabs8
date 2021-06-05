@@ -55,9 +55,14 @@ public class ClientUpdater implements Runnable {
 							res = "INSERT;";
 							while(rs1.next()) {
 								for(int j = 1; j <= 19; j++) {
-									res = res + rs1.getString(j) + ";";	
+									if(j == 3 || j >= 10) {
+										res = res + rs1.getString(j) + ",";
+									} else {
+										res = res + rs1.getString(j) + ";";
+									}
 								}
 							}
+							res = res.substring(0, res.length()-1);
 							rs1.close();
 							stmt1.close();
 						} else if(args[0].equals("DELETE")) {
@@ -68,9 +73,14 @@ public class ClientUpdater implements Runnable {
 							res = "UPDATE;";
 							while(rs1.next()) {
 								for(int j = 1; j <= 19; j++) {
-									res = res + rs1.getString(j) + ";";	
+									if(j == 3 || j >= 10) {
+										res = res + rs1.getString(j) + ",";
+									} else {
+										res = res + rs1.getString(j) + ";";
+									}
 								}
 							}
+							res = res.substring(0, res.length()-1);
 							rs1.close();
 							stmt1.close();
 						} else if(args[0].equals("TRUNCATE")) {

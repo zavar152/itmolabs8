@@ -49,24 +49,140 @@
                                  <children>
                                     <SplitPane fx:id="infoPane" disable="true" dividerPositions="0.85" orientation="VERTICAL" prefHeight="200.0" prefWidth="160.0" AnchorPane.bottomAnchor="-1.0" AnchorPane.leftAnchor="-1.0" AnchorPane.rightAnchor="-1.0" AnchorPane.topAnchor="-1.0">
                                       <items>
-                                        <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="100.0" prefWidth="160.0">
+                                        <AnchorPane minHeight="0.0" minWidth="0.0">
                                              <children>
-                                                <ScrollPane hbarPolicy="NEVER" minHeight="312.0" minWidth="199.0" prefHeight="312.0" prefWidth="199.0" vbarPolicy="ALWAYS" AnchorPane.bottomAnchor="-1.0" AnchorPane.leftAnchor="-1.0" AnchorPane.rightAnchor="-1.0" AnchorPane.topAnchor="-1.0">
+                                                <ScrollPane fx:id="objectScrollPane" fitToWidth="true" hbarPolicy="NEVER" prefHeight="312.0" prefWidth="199.0" vbarPolicy="ALWAYS" AnchorPane.bottomAnchor="-1.0" AnchorPane.leftAnchor="-1.0" AnchorPane.rightAnchor="-1.0" AnchorPane.topAnchor="-1.0">
                                                   <content>
-                                                    <AnchorPane>
+                                                    <AnchorPane minHeight="0.0" minWidth="0.0">
                                                          <children>
-                                                            <TextField fx:id="objectName" layoutX="6.0" layoutY="77.0" />
-                                                            <Label fx:id="objectNameText" layoutX="7.0" layoutY="54.0" text="%object.name">
-                                                               <font>
-                                                                  <Font name="System Bold" size="14.0" />
-                                                               </font>
-                                                            </Label>
-                                                            <TextField fx:id="objectId" editable="false" layoutX="6.0" layoutY="24.0" prefWidth="149.0" />
-                                                            <Label fx:id="objectIdText" layoutX="7.0" text="%object.id">
-                                                               <font>
-                                                                  <Font name="System Bold" size="14.0" />
-                                                               </font>
-                                                            </Label>
+                                                            <VBox prefHeight="200.0" prefWidth="100.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                                                               <children>
+                                                                  <Label fx:id="objectIdText" text="%object.id">
+                                                                     <font>
+                                                                        <Font name="System Bold" size="14.0" />
+                                                                     </font>
+                                                                  </Label>
+                                                                  <TextField fx:id="objectId" editable="false" prefWidth="149.0" />
+                                                                  <Label fx:id="objectOwnerText" text="%object.owner">
+                                                                     <font>
+                                                                        <Font name="System Bold" size="14.0" />
+                                                                     </font>
+                                                                  </Label>
+                                                                  <TextField fx:id="objectOwner" editable="false" prefWidth="149.0" />
+                                                                  <Label fx:id="objectNameText" text="%object.name">
+                                                                     <font>
+                                                                        <Font name="System Bold" size="14.0" />
+                                                                     </font>
+                                                                  </Label>
+                                                                  <TextField fx:id="objectName" />
+                                                                  <Label fx:id="objectXText" text="%object.x">
+                                                                     <font>
+                                                                        <Font name="System Bold" size="14.0" />
+                                                                     </font>
+                                                                  </Label>
+                                                                  <TextField fx:id="objectX" editable="false" prefWidth="149.0" />
+                                                                  <Label fx:id="objectYText" text="%object.y">
+                                                                     <font>
+                                                                        <Font name="System Bold" size="14.0" />
+                                                                     </font>
+                                                                  </Label>
+                                                                  <TextField fx:id="objectY" editable="false" prefWidth="149.0" />
+                                                                  <Label fx:id="objectDateText" text="%object.date">
+                                                                     <font>
+                                                                        <Font name="System Bold" size="14.0" />
+                                                                     </font>
+                                                                  </Label>
+                                                                  <TextField fx:id="objectDate" editable="false" prefWidth="149.0" />
+                                                                  <Label fx:id="objectScText" text="%object.sc">
+                                                                     <font>
+                                                                        <Font name="System Bold" size="14.0" />
+                                                                     </font>
+                                                                  </Label>
+                                                                  <TextField fx:id="objectSc" editable="false" prefWidth="149.0" />
+                                                                  <Label fx:id="objectEsText" text="%object.es">
+                                                                     <font>
+                                                                        <Font name="System Bold" size="14.0" />
+                                                                     </font>
+                                                                  </Label>
+                                                                  <TextField fx:id="objectEs" editable="false" prefWidth="149.0" />
+                                                                  <Label fx:id="objectTsText" text="%object.ts">
+                                                                     <font>
+                                                                        <Font name="System Bold" size="14.0" />
+                                                                     </font>
+                                                                  </Label>
+                                                                  <TextField fx:id="objectTs" editable="false" prefWidth="149.0" />
+                                                                  <Label fx:id="objectFoEText" text="%object.foe">
+                                                                     <font>
+                                                                        <Font name="System Bold" size="14.0" />
+                                                                     </font>
+                                                                  </Label>
+                                                                  <TextField fx:id="objectFoE" editable="false" prefWidth="149.0" />
+                                                                  <VBox fx:id="objectAdminBox" prefHeight="200.0" prefWidth="100.0">
+                                                                     <children>
+                                                                        <Label fx:id="objectAdmNameText" text="%object.admname">
+                                                                           <font>
+                                                                              <Font name="System Bold" size="14.0" />
+                                                                           </font>
+                                                                        </Label>
+                                                                        <TextField fx:id="objectAdmName" editable="false" prefWidth="149.0" />
+                                                                        <Label fx:id="objectAdmPassText" text="%object.admpass">
+                                                                           <font>
+                                                                              <Font name="System Bold" size="14.0" />
+                                                                           </font>
+                                                                        </Label>
+                                                                        <TextField fx:id="objectAdmPass" editable="false" prefWidth="149.0" />
+                                                                        <Label fx:id="objectAdmEyeText" text="%object.admeye">
+                                                                           <font>
+                                                                              <Font name="System Bold" size="14.0" />
+                                                                           </font>
+                                                                        </Label>
+                                                                        <TextField fx:id="objectAdmEye" editable="false" prefWidth="149.0" />
+                                                                        <Label fx:id="objectAdmHairText" text="%object.admhair">
+                                                                           <font>
+                                                                              <Font name="System Bold" size="14.0" />
+                                                                           </font>
+                                                                        </Label>
+                                                                        <TextField fx:id="objectAdmHair" editable="false" prefWidth="149.0" />
+                                                                        <Label fx:id="objectAdmCountryText" text="%object.admcountry">
+                                                                           <font>
+                                                                              <Font name="System Bold" size="14.0" />
+                                                                           </font>
+                                                                        </Label>
+                                                                        <TextField fx:id="objectAdmCountry" editable="false" prefWidth="149.0" />
+                                                                        <Label fx:id="objectAdmXText" text="%object.admx">
+                                                                           <font>
+                                                                              <Font name="System Bold" size="14.0" />
+                                                                           </font>
+                                                                        </Label>
+                                                                        <TextField fx:id="objectAdmX" editable="false" prefWidth="149.0" />
+                                                                        <Label fx:id="objectAdmYText" text="%object.admy">
+                                                                           <font>
+                                                                              <Font name="System Bold" size="14.0" />
+                                                                           </font>
+                                                                        </Label>
+                                                                        <TextField fx:id="objectAdmY" editable="false" prefWidth="149.0" />
+                                                                        <Label fx:id="objectAdmZText" text="%object.admz">
+                                                                           <font>
+                                                                              <Font name="System Bold" size="14.0" />
+                                                                           </font>
+                                                                        </Label>
+                                                                        <TextField fx:id="objectAdmZ" editable="false" prefWidth="149.0" />
+                                                                        <Label fx:id="objectAdmLocNameText" text="%object.admlocname">
+                                                                           <font>
+                                                                              <Font name="System Bold" size="14.0" />
+                                                                           </font>
+                                                                        </Label>
+                                                                        <TextField fx:id="objectAdmLocName" editable="false" prefWidth="149.0" />
+                                                                     </children>
+                                                                  </VBox>
+                                                               </children>
+                                                               <padding>
+                                                                  <Insets left="10.0" right="10.0" top="5.0" />
+                                                               </padding>
+                                                               <opaqueInsets>
+                                                                  <Insets />
+                                                               </opaqueInsets>
+                                                            </VBox>
                                                          </children>
                                                       </AnchorPane>
                                                   </content>
@@ -103,9 +219,158 @@
           </Tab>
             <Tab fx:id="tabTable" closable="false" text="%tab.table">
               <content>
-                  <StackPane>
+                  <StackPane prefWidth="523.0">
                      <children>
-                        <TableView fx:id="objectTable" prefHeight="200.0" prefWidth="200.0" />
+                        <SplitPane dividerPositions="0.7" prefHeight="160.0" prefWidth="200.0">
+                          <items>
+                            <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="160.0" prefWidth="100.0">
+                                 <children>
+                                    <TableView fx:id="objectTable" prefHeight="200.0" prefWidth="580.0" AnchorPane.bottomAnchor="-1.0" AnchorPane.leftAnchor="-1.0" AnchorPane.rightAnchor="-1.0" AnchorPane.topAnchor="-1.0" />
+                                 </children>
+                              </AnchorPane>
+                              <VBox alignment="TOP_CENTER">
+                                 <children>
+                                    <ScrollPane fx:id="objectFilterScrollPane" fitToWidth="true" hbarPolicy="NEVER" prefHeight="312.0" prefWidth="199.0" vbarPolicy="ALWAYS">
+                                       <content>
+                                          <AnchorPane minHeight="0.0" minWidth="0.0">
+                                             <children>
+                                                <VBox prefHeight="200.0" prefWidth="100.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                                                   <children>
+                                                      <Label fx:id="objectFilterIdText" text="%object.id">
+                                                         <font>
+                                                            <Font name="System Bold" size="14.0" />
+                                                         </font>
+                                                      </Label>
+                                                      <TextField fx:id="objectFilterId" prefWidth="149.0" />
+                                                      <Label fx:id="objectFilterOwnerText" text="%object.owner">
+                                                         <font>
+                                                            <Font name="System Bold" size="14.0" />
+                                                         </font>
+                                                      </Label>
+                                                      <TextField fx:id="objectFilterOwner" prefWidth="149.0" />
+                                                      <Label fx:id="objectFilterNameText" text="%object.name">
+                                                         <font>
+                                                            <Font name="System Bold" size="14.0" />
+                                                         </font>
+                                                      </Label>
+                                                      <TextField fx:id="objectFilterName" />
+                                                      <Label fx:id="objectFilterXText" text="%object.x">
+                                                         <font>
+                                                            <Font name="System Bold" size="14.0" />
+                                                         </font>
+                                                      </Label>
+                                                      <TextField fx:id="objectFilterX" prefWidth="149.0" />
+                                                      <Label fx:id="objectFilterYText" text="%object.y">
+                                                         <font>
+                                                            <Font name="System Bold" size="14.0" />
+                                                         </font>
+                                                      </Label>
+                                                      <TextField fx:id="objectFilterY" prefWidth="149.0" />
+                                                      <Label fx:id="objectFilterDateText" text="%object.date">
+                                                         <font>
+                                                            <Font name="System Bold" size="14.0" />
+                                                         </font>
+                                                      </Label>
+                                                      <TextField fx:id="objectFilterDate" prefWidth="149.0" />
+                                                      <Label fx:id="objectFilterScText" text="%object.sc">
+                                                         <font>
+                                                            <Font name="System Bold" size="14.0" />
+                                                         </font>
+                                                      </Label>
+                                                      <TextField fx:id="objectFilterSc" prefWidth="149.0" />
+                                                      <Label fx:id="objectFilterEsText" text="%object.es">
+                                                         <font>
+                                                            <Font name="System Bold" size="14.0" />
+                                                         </font>
+                                                      </Label>
+                                                      <TextField fx:id="objectFilterEs" prefWidth="149.0" />
+                                                      <Label fx:id="objectFilterTsText" text="%object.ts">
+                                                         <font>
+                                                            <Font name="System Bold" size="14.0" />
+                                                         </font>
+                                                      </Label>
+                                                      <TextField fx:id="objectFilterTs" prefWidth="149.0" />
+                                                      <Label fx:id="objectFilterFoEText" text="%object.foe">
+                                                         <font>
+                                                            <Font name="System Bold" size="14.0" />
+                                                         </font>
+                                                      </Label>
+                                                      <TextField fx:id="objectFilterFoE" prefWidth="149.0" />
+                                                      <Label fx:id="objectFilterAdmNameText" text="%object.admname">
+                                                         <font>
+                                                            <Font name="System Bold" size="14.0" />
+                                                         </font>
+                                                      </Label>
+                                                      <TextField fx:id="objectFilterAdmName" prefWidth="149.0" />
+                                                      <Label fx:id="objectFilterAdmPassText" text="%object.admpass">
+                                                         <font>
+                                                            <Font name="System Bold" size="14.0" />
+                                                         </font>
+                                                      </Label>
+                                                      <TextField fx:id="objectFilterAdmPass" prefWidth="149.0" />
+                                                      <Label fx:id="objectFilterAdmEyeText" text="%object.admeye">
+                                                         <font>
+                                                            <Font name="System Bold" size="14.0" />
+                                                         </font>
+                                                      </Label>
+                                                      <TextField fx:id="objectFilterAdmEye" prefWidth="149.0" />
+                                                      <Label fx:id="objectFilterAdmHairText" text="%object.admhair">
+                                                         <font>
+                                                            <Font name="System Bold" size="14.0" />
+                                                         </font>
+                                                      </Label>
+                                                      <TextField fx:id="objectFilterAdmHair" prefWidth="149.0" />
+                                                      <Label fx:id="objectFilterAdmCountryText" text="%object.admcountry">
+                                                         <font>
+                                                            <Font name="System Bold" size="14.0" />
+                                                         </font>
+                                                      </Label>
+                                                      <TextField fx:id="objectFilterAdmCountry" prefWidth="149.0" />
+                                                      <Label fx:id="objectFilterAdmXText" text="%object.admx">
+                                                         <font>
+                                                            <Font name="System Bold" size="14.0" />
+                                                         </font>
+                                                      </Label>
+                                                      <TextField fx:id="objectFilterAdmX" prefWidth="149.0" />
+                                                      <Label fx:id="objectFilterAdmYText" text="%object.admy">
+                                                         <font>
+                                                            <Font name="System Bold" size="14.0" />
+                                                         </font>
+                                                      </Label>
+                                                      <TextField fx:id="objectFilterAdmY" prefWidth="149.0" />
+                                                      <Label fx:id="objectFilterAdmZText" text="%object.admz">
+                                                         <font>
+                                                            <Font name="System Bold" size="14.0" />
+                                                         </font>
+                                                      </Label>
+                                                      <TextField fx:id="objectFilterAdmZ" prefWidth="149.0" />
+                                                      <Label fx:id="objectFilterAdmLocNameText" text="%object.admlocname">
+                                                         <font>
+                                                            <Font name="System Bold" size="14.0" />
+                                                         </font>
+                                                      </Label>
+                                                      <TextField fx:id="objectFilterAdmLocName" prefWidth="149.0" />
+                                                   </children>
+                                                   <padding>
+                                                      <Insets left="10.0" right="10.0" top="5.0" />
+                                                   </padding>
+                                                   <opaqueInsets>
+                                                      <Insets />
+                                                   </opaqueInsets>
+                                                </VBox>
+                                             </children>
+                                          </AnchorPane>
+                                       </content>
+                                    </ScrollPane>
+                                    <Button fx:id="resetButton" mnemonicParsing="false" text="%button.reset">
+                                       <VBox.margin>
+                                          <Insets top="5.0" />
+                                       </VBox.margin>
+                                    </Button>
+                                 </children>
+                              </VBox>
+                          </items>
+                        </SplitPane>
                      </children>
                   </StackPane>
               </content>

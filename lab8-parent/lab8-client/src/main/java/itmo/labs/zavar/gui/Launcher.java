@@ -1,13 +1,18 @@
 package itmo.labs.zavar.gui;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Locale;
+import java.util.MissingResourceException;
 import java.util.Properties;
 import java.util.ResourceBundle;
 import java.util.stream.Stream;
@@ -20,6 +25,7 @@ import javafx.application.Platform;
 import javafx.concurrent.Task;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
+import javafx.scene.control.ProgressBar;
 import javafx.scene.image.Image;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
@@ -33,14 +39,14 @@ public class Launcher extends Application{
 	private static Stage mainStage;
 	private ResourceBundle bundle;
 	private static HashMap<String, String> langs = new HashMap<String, String>();
+	private static HashMap<String, String> invLangs = new HashMap<String, String>();
+	private static Properties prop = new Properties();
 	private Properties langsFile = new Properties();
+	private static String home = System.getProperty("user.home");
+	private static String propsPath = home + "/lab8Client/settings.properties";
+	private static String mainPath = home + "/lab8Client";
 	
 	public static void main(String[] args) throws IOException, InterruptedException {
-		if(args.length != 2) {
-			System.out.println("You should enter ip and port!");
-			System.exit(0);
-		}
-		client = new Client(args);
 		launch(args);
 	}
 	
@@ -56,10 +62,41 @@ public class Launcher extends Application{
 		return langs;
 	}
 	
+	public static HashMap<String, String> getInvLangs() {
+		return invLangs;
+	}
+	
 	@Override
 	public void init() throws Exception {
 		
-		bundle = ResourceBundle.getBundle("langs/lang", new Locale("ru", "RU"));
+		File main = new File(mainPath);
+		if(!main.exists())
+		{
+			main.mkdirs();
+			System.out.println("Created main folder");
+		}
+		
+		File propFile = new File(propsPath);
+
+		if(!propFile.exists())
+		{
+			propFile.createNewFile();
+			Files.copy(getClass().getResourceAsStream("/settings.properties"), propFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+			System.out.println("Copyed properties");
+		}
+		
+		prop.load(new FileInputStream(propsPath));
+		
+		client = new Client(new String[] {(String) prop.get("ip"), (String) prop.get("port")});
+		
+		String[] lang = ((String)prop.get("lang")).split("_");
+		
+		try {
+			bundle = ResourceBundle.getBundle("langs/lang", new Locale(lang[0], lang[1]), new GUIUtils.UTF8Control());
+		} catch(MissingResourceException e) {
+			prop.setProperty("lang", "ru_RU");
+			bundle = ResourceBundle.getBundle("langs/lang", new Locale("ru", "RU"), new GUIUtils.UTF8Control());
+		}
 		
 		langsFile.load(getClass().getResourceAsStream("/langs/langs.properties"));
 		
@@ -69,6 +106,7 @@ public class Launcher extends Application{
 			String name = langsFile.getProperty((String) keys.next());
 			String locale = langsFile.getProperty((String) keys.next());
 			langs.put(name, locale);
+			invLangs.put(locale, name);
 		}
 		
 		try (Stream<Path> paths = Files.walk(Paths.get(getClass().getResource("/langs").toURI()))) {
@@ -93,6 +131,8 @@ public class Launcher extends Application{
 			try {
 				scene = new Scene(FXMLLoader.load(getClass().getResource("/fxml/Splash.fxml")), 200, 215);
 			} catch (IOException e) {}
+			ProgressBar bar = (ProgressBar) scene.getRoot().getChildrenUnmodifiable().get(1);
+			bar.setProgress(ProgressBar.INDETERMINATE_PROGRESS);
             splashStage.setScene(scene);
         });
 		
@@ -140,6 +180,11 @@ public class Launcher extends Application{
 			mainStage.setTitle("Lab8 Client");
 			mainStage.getIcons().add(new Image(getClass().getResourceAsStream("/img/icon.png")));
 			//mainStage.getScene().getStylesheets().add("css/darkTheme.css");
+			if(getTheme() == 1) {
+	    		getStage().getScene().getStylesheets().add("css/darkTheme.css");
+	    	} else {
+	    		getStage().getScene().getStylesheets().clear();
+	    	}
 			if (client.isConnected()) {
 				mainStage.show();
 			} else {
@@ -150,7 +195,7 @@ public class Launcher extends Application{
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
-			GUIUtils.showError(e, "Error on start");
+			GUIUtils.showAndWaitError(e, "Error on start");
 		}
 	}
 	
@@ -164,5 +209,31 @@ public class Launcher extends Application{
 
 	public static boolean isStop() {
 		return stopFlag;
+	}
+
+	public static int getTheme() {
+		return Integer.parseInt((String) prop.get("theme"));
+	}
+
+	public static String getLang() {
+		return (String) prop.get("lang");
+	}
+	
+	public static void setLang(String lang) {
+		prop.setProperty("lang", lang);
+    	try {
+			prop.store(new FileOutputStream(propsPath), null);
+		} catch (IOException e) {
+			GUIUtils.showAndWaitError(e);
+		}
+	}
+	
+	public static void setTheme(int theme) {
+		prop.setProperty("theme", theme + "");
+    	try {
+			prop.store(new FileOutputStream(propsPath), null);
+		} catch (IOException e) {
+			GUIUtils.showAndWaitError(e);
+		}
 	}
 }
