@@ -35,83 +35,88 @@ public class ClientUpdater implements Runnable {
 	public void run() {
 		try {
 			while (true) {
+				try {
+					Statement stmt = connection.createStatement();
+					ResultSet rs = stmt.executeQuery("SELECT 1");
+					rs.close();
+					stmt.close();
 
-				Statement stmt = connection.createStatement();
-				ResultSet rs = stmt.executeQuery("SELECT 1");
-				rs.close();
-				stmt.close();
+					PGNotification notifications[] = pgConnection.getNotifications();
+					if (notifications != null) {
+						for (int i = 0; i < notifications.length; i++) {
+							logger.info("Got notification: " + notifications[i].getName());
 
-				PGNotification notifications[] = pgConnection.getNotifications();
-				if (notifications != null) {
-					for (int i = 0; i < notifications.length; i++) {
-						logger.info("Got notification: " + notifications[i].getName());
+							String res = "";
+							String[] args = notifications[i].getParameter().split(";");
 
-						String res = "";
-						String[] args = notifications[i].getParameter().split(";");
-						
-						if(args[0].equals("INSERT")) {
-							Statement stmt1 = connection.createStatement();
-							ResultSet rs1 = stmt1.executeQuery(DbUtils.getById(Integer.parseInt(args[1])));
-							res = "INSERT;";
-							while(rs1.next()) {
-								for(int j = 1; j <= 19; j++) {
-									if(j == 3 || j >= 10) {
-										res = res + rs1.getString(j) + ",";
-									} else {
-										res = res + rs1.getString(j) + ";";
+							if (args[0].equals("INSERT")) {
+								Statement stmt1 = connection.createStatement();
+								ResultSet rs1 = stmt1.executeQuery(DbUtils.getById(Integer.parseInt(args[1])));
+								res = "INSERT;";
+								while (rs1.next()) {
+									for (int j = 1; j <= 19; j++) {
+										if (j == 3 || j >= 10) {
+											res = res + rs1.getString(j) + ",";
+										} else {
+											res = res + rs1.getString(j) + ";";
+										}
 									}
 								}
-							}
-							res = res.substring(0, res.length()-1);
-							rs1.close();
-							stmt1.close();
-						} else if(args[0].equals("DELETE")) {
-							res = args[0] + ";" + args[1];
-						} else if(args[0].equals("UPDATE")) {
-							Statement stmt1 = connection.createStatement();
-							ResultSet rs1 = stmt1.executeQuery(DbUtils.getById(Integer.parseInt(args[1])));
-							res = "UPDATE;";
-							while(rs1.next()) {
-								for(int j = 1; j <= 19; j++) {
-									if(j == 3 || j >= 10) {
-										res = res + rs1.getString(j) + ",";
-									} else {
-										res = res + rs1.getString(j) + ";";
+								res = res.substring(0, res.length() - 1);
+								rs1.close();
+								stmt1.close();
+							} else if (args[0].equals("DELETE")) {
+								res = args[0] + ";" + args[1];
+							} else if (args[0].equals("UPDATE")) {
+								Statement stmt1 = connection.createStatement();
+								ResultSet rs1 = stmt1.executeQuery(DbUtils.getById(Integer.parseInt(args[1])));
+								res = "UPDATE;";
+								while (rs1.next()) {
+									for (int j = 1; j <= 19; j++) {
+										if (j == 3 || j >= 10) {
+											res = res + rs1.getString(j) + ",";
+										} else {
+											res = res + rs1.getString(j) + ";";
+										}
 									}
 								}
+								res = res.substring(0, res.length() - 1);
+								rs1.close();
+								stmt1.close();
+							} else if (args[0].equals("TRUNCATE")) {
+								res = args[0];
 							}
-							res = res.substring(0, res.length()-1);
-							rs1.close();
-							stmt1.close();
-						} else if(args[0].equals("TRUNCATE")) {
-							res = args[0];
-						}
-						
-						
-						
-						ListIterator<ClientHandler> iter = clients.listIterator();
 
-						while (iter.hasNext()) {
-							ClientHandler handler = iter.next();
-							if (handler.isOpen()) {
-								logger.info(res);
-								//handler.addOutput(res);
-								handler.writeToClient(ByteBuffer.allocate(0), res);
-							} else {
-								iter.remove();
+							ListIterator<ClientHandler> iter = clients.listIterator();
+
+							while (iter.hasNext()) {
+								ClientHandler handler = iter.next();
+								if (handler.isOpen()) {
+									logger.info(res);
+									// handler.addOutput(res);
+									handler.writeToClient(ByteBuffer.allocate(0), res);
+								} else {
+									iter.remove();
+								}
 							}
 						}
 					}
+					Thread.sleep(500);
 
+				} catch (SQLException e) {
+					try {
+						this.connection = Server.getDbManager().getConnection();
+						this.pgConnection = connection.unwrap(PGConnection.class);
+						Statement stmt = connection.createStatement();
+						stmt.execute("LISTEN checker");
+						stmt.close();
+					} catch (SQLException e1) {
+						logger.error(e.getMessage());
+					}
 				}
-
-				Thread.sleep(500);
 			}
 		} catch (InterruptedException e) {
-			
-		} catch (SQLException e) {
-			logger.error(e.getMessage());
-			//e.printStackTrace();
+
 		}
 	}
 

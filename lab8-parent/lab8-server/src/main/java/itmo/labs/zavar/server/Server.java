@@ -54,6 +54,10 @@ public class Server {
 	
 	private static DataBaseManager db;
 	
+	public static DataBaseManager getDbManager() {
+		return db;
+	}
+	
 	public static void main(String[] args) {
 		
 		if(args.length != 2)
