@@ -56,6 +56,7 @@ public class ReaderThread implements Runnable{
 					//System.out.println(per.getAnswer());
 					ans = per.getAnswer();
 					ansOut.println(ans);
+					ansOut.println("****");
 					if(per.getData().length != 0) {
 						data = ((String)per.getData()[0]);
 						dataOut.println(data);

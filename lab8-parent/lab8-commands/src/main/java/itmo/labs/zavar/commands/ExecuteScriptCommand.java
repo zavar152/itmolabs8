@@ -217,11 +217,10 @@ public class ExecuteScriptCommand extends Command {
 					throw new CommandRunningException("Error while reading script file!");
 				}
 
-				for (int i = 0; i < lines.size(); i++) {
+				for (int i = 0; i < lines.size()-1; i++) {
 					String line = lines.get(i);
 					line = line.replaceAll(" +", " ").trim();
 					String command[] = line.split(" ");
-
 					if (env.getCommandsMap().containsKey(command[0])) {
 						try {
 							if (env.getCommandsMap().get(command[0]).isNeedInput()) {
@@ -246,10 +245,10 @@ public class ExecuteScriptCommand extends Command {
 									to = to + obj.get(order[j]) + "\n";
 								}
 								env.getHistory().addToGlobal(line);
-								env.getCommandsMap().get(command[0]).execute(ExecutionType.SCRIPT, env, Arrays.copyOfRange(command, 1, jsonPos), new ReaderInputStream(new StringReader(to), StandardCharsets.UTF_8), outStream);
+								env.getCommandsMap().get(command[0]).execute(ExecutionType.SCRIPT, env, ArrayUtils.addAll(Arrays.copyOfRange(command, 1, jsonPos), args[args.length-1]), new ReaderInputStream(new StringReader(to), StandardCharsets.UTF_8), outStream);
 							} else {
 								env.getHistory().addToGlobal(line);
-								env.getCommandsMap().get(command[0]).execute(ExecutionType.SCRIPT, env, Arrays.copyOfRange(command, 1, command.length), inStream, outStream);
+								env.getCommandsMap().get(command[0]).execute(ExecutionType.SCRIPT, env, ArrayUtils.addAll(Arrays.copyOfRange(command, 1, command.length), args[args.length-1]), inStream, outStream);
 							}
 						} catch (CommandException e) {
 							throw new CommandException(e.getMessage());

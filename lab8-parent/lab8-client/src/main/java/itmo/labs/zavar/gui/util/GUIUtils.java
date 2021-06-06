@@ -3,6 +3,8 @@ package itmo.labs.zavar.gui.util;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.URL;
@@ -50,6 +52,39 @@ public class GUIUtils {
 	        }
 	        return bundle;
 	    }
+	}
+	
+	public interface Consumer 
+    {
+        public void appendText(String text);
+    }
+	
+	public static class StreamCapturer extends OutputStream 
+	{
+		private StringBuilder buffer;
+		private Consumer consumer;
+		private PrintStream old;
+
+		public StreamCapturer(Consumer consumer, PrintStream old) 
+		{
+			buffer = new StringBuilder(128);
+			this.old = old;
+			this.consumer = consumer;
+		}
+
+		@Override
+		public void write(int b) throws IOException 
+		{
+			char c = (char) b;
+			String value = Character.toString(c);
+			buffer.append(value);
+			if(value.equals("\n")) 
+			{
+				consumer.appendText(buffer.toString());
+				buffer.delete(0, buffer.length());
+			}
+			old.print(c);
+		}
 	}
 	
     public static void showAndWaitError(String text) {

@@ -27,7 +27,7 @@ public class StudyGroup implements Comparable<StudyGroup>, Serializable {
 	private long transferredStudents;
 	private FormOfEducation formOfEducation;
 	private Person groupAdmin;
-	private String owner;
+	private String owner, date = "";
 
 	/**
 	 * Default constructor uses for csv parser. Don't use it to create objects.
@@ -76,6 +76,7 @@ public class StudyGroup implements Comparable<StudyGroup>, Serializable {
 		}
 
 		creationDate = LocalDate.now();
+		date = creationDate.toString();
 
 		if (studentsCount == null || studentsCount <= 0) {
 			throw new IllegalArgumentException("Students count should be greater than 0 and can't be null");
@@ -208,18 +209,28 @@ public class StudyGroup implements Comparable<StudyGroup>, Serializable {
 		creationDate = d;
 	}
 
+	public void setStringCreationDate(String format) {
+		date = format;
+	}
+	
+	public String getStringCreationDate() {
+		return date;
+	}
+	
+	@Deprecated
 	public Date getCreationDate() throws ParseException {
 		return new SimpleDateFormat("yyyy-MM-dd").parse(creationDate.toString());
 	}
 
+	@Deprecated
 	public void setCreationDate(Date date) {
 		this.creationDate = date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
 	}
-
+	
 	@Override
 	public String toString() {
 		return "StudyGroup [name=" + name + ", coordinateX=" + coordinates.getX() + ", coordinateY="
-				+ coordinates.getY() + ", creationDate=" + creationDate + ", studentsCount=" + studentsCount
+				+ coordinates.getY() + ", creationDate=" + date + ", studentsCount=" + studentsCount
 				+ ", expelledStudents=" + expelledStudents + ", transferredStudents=" + transferredStudents
 				+ ", formOfEducation=" + formOfEducation + ", groupAdmin=[" + groupAdmin + "]]";
 	}

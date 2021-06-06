@@ -14,7 +14,6 @@ import itmo.labs.zavar.commands.base.Environment;
 import itmo.labs.zavar.db.DbUtils;
 import itmo.labs.zavar.exception.CommandArgumentException;
 import itmo.labs.zavar.exception.CommandException;
-import itmo.labs.zavar.exception.CommandRunningException;
 import itmo.labs.zavar.exception.CommandSQLException;
 
 /**
@@ -52,7 +51,7 @@ public class ShowCommand extends Command {
 					rs.next();
 					if (rs.getInt(1) == 0) {
 						con.close();
-						throw new CommandRunningException("Collection is empty!");
+						throw new CommandException("/-/");
 					}
 					stmt = con.prepareStatement(DbUtils.getAll());
 					rs = stmt.executeQuery();

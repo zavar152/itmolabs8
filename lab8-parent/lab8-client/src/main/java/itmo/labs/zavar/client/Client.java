@@ -72,6 +72,7 @@ public class Client {
 	private String args[];
 	private ClientState clientState;
 	private CommandState commandState;
+	private String lastError = "";
 	
 	public Client(String args[]) {
 		this.args = args;
@@ -177,14 +178,14 @@ public class Client {
 		}
 	}
 	
-	public void executeCommand(String input, InputStream in) throws InterruptedException, IOException {
+	public void executeCommand(String input, InputStream in, OutputStream lOut) throws InterruptedException, IOException, CommandException {
 
 		try {
 			input = input.replaceAll(" +", " ").trim();
 			String command[] = input.split(" ");
 
 			if (command[0].equals("exit")) {
-				commandsMap.get(command[0]).execute(ExecutionType.CLIENT, env, Arrays.copyOfRange(command, 1, command.length), in, System.out);
+				commandsMap.get(command[0]).execute(ExecutionType.CLIENT, env, Arrays.copyOfRange(command, 1, command.length), in, lOut);
 				close();
 			}
 
@@ -202,7 +203,7 @@ public class Client {
 						if (!rdThread.isConnected()) {
 							throw new SocketException();
 						}
-						c.execute(ExecutionType.CLIENT, env, Arrays.copyOfRange(command, 1, command.length), in, System.out);
+						c.execute(ExecutionType.CLIENT, env, Arrays.copyOfRange(command, 1, command.length), in, lOut);
 						env.getHistory().clearTempHistory();
 						ByteArrayOutputStream stream = new ByteArrayOutputStream();
 						ObjectOutputStream ser = new ObjectOutputStream(stream);
@@ -226,8 +227,10 @@ public class Client {
 					}
 				} catch (CommandException e) {
 					env.getHistory().clearTempHistory();
+					lastError = e.getMessage();
 					System.err.println(e.getMessage());
 					commandState = CommandState.ERROR;
+					throw new CommandException(e.getMessage());
 				}
 			} else {
 				System.err.println("Unknown command! Use help.");
@@ -240,6 +243,9 @@ public class Client {
 			commandState = CommandState.SERVER_UNAVAILABLE;
 			return;
 		} catch (Exception e) {
+			if(e instanceof CommandException) {
+				throw new CommandException(e.getMessage());
+			}
 			e.printStackTrace();
 			clientState = ClientState.ERROR;
 			commandState = CommandState.ERROR;
@@ -281,5 +287,9 @@ public class Client {
 		thr.start();
 
 		clientState = ClientState.CONNECTED;
+	}
+
+	public String getLastError() {
+		return lastError;
 	}
 }

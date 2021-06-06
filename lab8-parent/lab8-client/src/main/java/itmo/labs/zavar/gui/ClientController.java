@@ -1,13 +1,18 @@
 package itmo.labs.zavar.gui;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.PipedInputStream;
+import java.io.PrintStream;
 import java.io.StringReader;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.text.NumberFormat;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Locale;
 import java.util.Random;
 import java.util.ResourceBundle;
@@ -28,6 +33,7 @@ import org.supercsv.prefs.CsvPreference;
 
 import itmo.labs.zavar.client.util.ParseCoordinates;
 import itmo.labs.zavar.client.util.ParsePerson;
+import itmo.labs.zavar.exception.CommandException;
 import itmo.labs.zavar.gui.util.GUIUtils;
 import itmo.labs.zavar.studygroup.FormOfEducation;
 import itmo.labs.zavar.studygroup.StudyGroup;
@@ -45,7 +51,10 @@ import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.Cursor;
 import javafx.scene.Group;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
@@ -57,19 +66,23 @@ import javafx.scene.control.TabPane;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
+import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TextInputDialog;
 import javafx.scene.control.TitledPane;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.GridPane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.Circle;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextBoundsType;
+import javafx.stage.FileChooser;
 import javafx.util.Duration;
 
 public class ClientController implements Initializable {
@@ -92,9 +105,11 @@ public class ClientController implements Initializable {
 	objectAdmXText, objectAdmYText, objectAdmZText, objectAdmLocNameText, 
 	objectFilterNameText, objectFilterIdText, objectFilterOwnerText, objectFilterXText, objectFilterYText, objectFilterDateText, objectFilterScText, objectFilterEsText, objectFilterTsText,
 	objectFilterFoEText, objectFilterAdmNameText, objectFilterAdmPassText, objectFilterAdmEyeText, objectFilterAdmHairText, objectFilterAdmCountryText,
-	objectFilterAdmXText, objectFilterAdmYText, objectFilterAdmZText, objectFilterAdmLocNameText;
+	objectFilterAdmXText, objectFilterAdmYText, objectFilterAdmZText, objectFilterAdmLocNameText, outputText;
 	@FXML
-	private Button showButton, updateObjButton, deleteObjButton, loginButton, registerButton, resetButton;
+	private Button updateObjButton, deleteObjButton, loginButton, registerButton, resetButton,
+	clearButton, infoButton, averageOfTsButton, countGTsButton, removeByScButton, executeButton,
+	addButton, addMinButton, addMaxButton;
 	@FXML
 	private TextField objectName, objectId, loginField, objectOwner, objectX, objectY, objectDate, objectSc, objectEs,
 	objectTs, objectFoE, objectAdmName, objectAdmPass, objectAdmEye, objectAdmHair, objectAdmCountry, objectAdmX,
@@ -118,6 +133,10 @@ public class ClientController implements Initializable {
 	private TitledPane accountPane;
 	@FXML
 	private VBox objectAdminBox;
+	@FXML
+	private TextArea outputField;
+	@FXML
+	private GridPane commandsGridPane;
 	
 	private String login;
 	private HashMap<Long, Circle> objectsMap = new HashMap<Long, Circle>();
@@ -147,10 +166,14 @@ public class ClientController implements Initializable {
 	private TableColumn<StudyGroup, String> adminLocNameColumn = new TableColumn<>("%column.admlocname");
 	@SuppressWarnings("unused")
 	private boolean isTriggersDone = false;
+	private Long selected = -1L;
+	private NumberFormat numberFormat;
+	private DateTimeFormatter dateFormat;
 	
 	@Override
     public void initialize(URL location, ResourceBundle res) 
     {	
+		tabCommands.setDisable(true);
 		objectTable.setVisible(false);
 		resources = res;
 		
@@ -158,6 +181,10 @@ public class ClientController implements Initializable {
 		setupTableLanguage(resources);
 		
 		langComboBox.setValue(Launcher.getInvLangs().get(Launcher.getLang()));
+		
+		String[] locStart = Launcher.getLangs().get(langComboBox.getValue()).split("_");
+		Locale lStart = new Locale(locStart[0], locStart[1]);
+		dateFormat = DateTimeFormatter.ofPattern("dd MMMM yyyy", lStart);
 		
 		if(Launcher.getTheme() == 1) {
     		darkButton.setText(resources.getString("button.disableDark"));
@@ -178,7 +205,9 @@ public class ClientController implements Initializable {
 						GUIUtils.showError("Server connection is lost! You should wait.");
 						login = "";
 						accountText.setText("");
-						objectTable.getItems().clear();
+						if(obsList != null)
+							obsList.clear();
+						stList.clear();
 						objectsMap.clear();
 						objectGroup.getChildren().clear();
 					});
@@ -197,7 +226,10 @@ public class ClientController implements Initializable {
 		
 		langComboBox.setOnAction(e -> {
 			String[] locale = Launcher.getLangs().get(langComboBox.getValue()).split("_");
-			resources = ResourceBundle.getBundle("langs/lang", new Locale(locale[0], locale[1]), new GUIUtils.UTF8Control());
+			Locale l = new Locale(locale[0], locale[1]);
+			numberFormat = NumberFormat.getInstance(l);
+			dateFormat = DateTimeFormatter.ofPattern("dd MMMM yyyy", l);
+			resources = ResourceBundle.getBundle("langs/lang", l, new GUIUtils.UTF8Control());
 			Launcher.setLang(locale[0] + "_" + locale[1]);
 			setupLanguage(resources);
 		});
@@ -226,12 +258,65 @@ public class ClientController implements Initializable {
         	}
         });
         
+        
+        updateObjButton.setOnMouseClicked(e -> {
+			Task<Void> updateTask = new Task<Void>() {
+				@Override
+				protected Void call() throws Exception {
+					StudyGroup st = stList.stream().filter(t -> t.getId().equals(selected)).findAny().get();
+					String res;
+					if(st.getGroupAdmin() == null) {
+						res = "1\n" + objectName.getText() + "\n" + objectX.getText() + "\n" + objectY.getText() + "\n" + objectSc.getText() + "\n" +
+								objectEs.getText() + "\n" + objectTs.getText() + "\n" + objectFoE.getText() + "\nNO\n";
+					} else {
+						res = "1\n" + objectName.getText() + "\n" + objectX.getText() + "\n" + objectY.getText() + "\n" + objectSc.getText() + "\n" +
+								objectEs.getText() + "\n" + objectTs.getText() + "\n" + objectFoE.getText() + "\nYES\n" + objectAdmName.getText()
+								+ "\n" + objectAdmPass.getText() + "\n" + objectAdmEye.getText() + "\n" + objectAdmHair.getText() + "\n" +
+								objectAdmCountry.getText() + "\n" + objectAdmLocName.getText() + "\n" + objectAdmX.getText()
+								 + "\n" + objectAdmY.getText() + "\n" + objectAdmZ.getText();
+					}
+						
+					Launcher.getClient().executeCommand("update " + objectId.getText(), new ReaderInputStream(new StringReader(res), StandardCharsets.UTF_8), System.out);
+					return null;
+				}
+			};
+			
+			new Thread(updateTask).start();
+			
+			updateTask.setOnSucceeded(e1 -> {
+				Task<Void> updateAnswerTask = new Task<Void>() {
+					@Override
+					protected Void call() throws Exception {
+						try {
+							Scanner sc = new Scanner(Launcher.getClient().getAnswerInput());
+							while (sc.hasNextLine()) {
+								String f = sc.nextLine();
+								System.out.println("s_" + f);
+								if(f.equals("****"))
+									break;
+								if (!f.isEmpty()) {
+									Platform.runLater(() -> {
+										infoText.setText("Status: " + f);
+									});
+								}
+							}
+						} catch(Exception e) {
+							e.printStackTrace();
+						}
+						return null;
+					}
+				};
+				new Thread(updateAnswerTask).start();
+			});
+        });
+        
+        
         deleteObjButton.setOnMouseClicked(e -> {
         	infoPane.setDisable(true);
 			Task<Void> removeTask = new Task<Void>() {
 				@Override
 				protected Void call() throws Exception {
-					Launcher.getClient().executeCommand("remove_by_id " + objectId.getText(), new ReaderInputStream(new StringReader(""), StandardCharsets.UTF_8));
+					Launcher.getClient().executeCommand("remove_by_id " + objectId.getText(), new ReaderInputStream(new StringReader(""), StandardCharsets.UTF_8), System.out);
 					return null;
 				}
 			};
@@ -244,11 +329,16 @@ public class ClientController implements Initializable {
 					protected Void call() throws Exception {
 						try {
 							Scanner sc = new Scanner(Launcher.getClient().getAnswerInput());
-							while (sc.hasNext()) {
+							while (sc.hasNextLine()) {
 								String f = sc.nextLine();
-								Platform.runLater(() -> {
-									infoText.setText("Status: " + f);
-								});
+								System.out.println(f);
+								if(f.equals("****"))
+									break;
+								if (!f.isEmpty()) {
+									Platform.runLater(() -> {
+										infoText.setText("Status: " + f);
+									});
+								}
 							}
 						} catch(Exception e) {
 							e.printStackTrace();
@@ -282,22 +372,11 @@ public class ClientController implements Initializable {
 						});
 						cancel();
 					} else
-						Launcher.getClient().executeCommand("login", new ReaderInputStream(new StringReader(loginField.getText() + "\n" + passwordField.getText()), StandardCharsets.UTF_8));
+						Launcher.getClient().executeCommand("login", new ReaderInputStream(new StringReader(loginField.getText() + "\n" + passwordField.getText()), StandardCharsets.UTF_8), System.out);
 
 					return null;
 				}
 			};
-			
-			//Replacing
-			/*
-			 * 											for (int idx = 0; idx < objectTable.getItems().size(); idx++) {
-											    YourData data = objectTable.getItems().get(idx);
-											    if (data.getColumnOne().equals(textToCompare)) {
-											    	objectTable.getItems().set(idx, someOtherData);
-											       return;
-											    }
-											}
-			 */
 			
 			loginTask.setOnCancelled(e3 -> {
 				infoText.setText("Status: Login failed");
@@ -314,12 +393,14 @@ public class ClientController implements Initializable {
 					protected Void call() throws Exception {
 						try {
 							Scanner sc = new Scanner(Launcher.getClient().getAnswerInput());
-							while (sc.hasNext()) {
+							while (sc.hasNextLine()) {
 								String f = sc.nextLine();
 								if(f.equals("loginDone")) {
 									Platform.runLater(() -> {
 										loginInfoText.setText("");
-										objectTable.getItems().clear();
+										if(obsList != null)
+											obsList.clear();
+										stList.clear();
 										objectsMap.clear();
 										objectGroup.getChildren().clear();
 										login = loginField.getText();
@@ -327,11 +408,14 @@ public class ClientController implements Initializable {
 										prepareObjectBrowser();
 										prepareTriggers();
 										isTriggersDone = true;
+										tabCommands.setDisable(false);
 									});
 									break;
 								} else {
 									Platform.runLater(() -> {
-										loginInfoText.setText(f);
+										if(!f.equals("****")) {
+											loginInfoText.setText(f);
+										}
 									});
 									cancel();
 								}
@@ -383,7 +467,7 @@ public class ClientController implements Initializable {
 						});
 						cancel();
 					} else
-						Launcher.getClient().executeCommand("register", new ReaderInputStream(new StringReader(loginField.getText() + "\n" + passwordField.getText()), StandardCharsets.UTF_8));
+						Launcher.getClient().executeCommand("register", new ReaderInputStream(new StringReader(loginField.getText() + "\n" + passwordField.getText()), StandardCharsets.UTF_8), System.out);
 
 					return null;
 				}
@@ -397,11 +481,14 @@ public class ClientController implements Initializable {
 					protected Void call() throws Exception {
 						try {
 							Scanner sc = new Scanner(Launcher.getClient().getAnswerInput());
-							while (sc.hasNext()) {
+							while (sc.hasNextLine()) {
 								String f = sc.nextLine();
+								if(f.equals("****"))
+									break;
 								Platform.runLater(() -> {
 									loginInfoText.setText(f);
 								});
+								
 							}
 						} catch(Exception e) {
 							e.printStackTrace();
@@ -413,6 +500,15 @@ public class ClientController implements Initializable {
 			});
         });
         
+        setDefaultCommandsButton(averageOfTsButton, "average_of_transferred_students");
+        setDefaultCommandsButton(infoButton, "info");
+        setArgsCommandsButton(countGTsButton, "count_greater_than_transferred_students");
+        setArgsCommandsButton(removeByScButton, "remove_any_by_students_count");
+        setWarningCommandButton(clearButton, "clear");
+        setExecuteCommandButton();
+        setAddCommandButton(addButton, "add");
+        setAddCommandButton(addMaxButton, "add_if_max");
+        setAddCommandButton(addMinButton, "add_if_min");
     }
 
 	private void prepareTable() {
@@ -459,7 +555,7 @@ public class ClientController implements Initializable {
 	    nameColumn.setPrefWidth(150);
 		coordXColumn.setPrefWidth(50);
 		coordYColumn.setPrefWidth(50);
-		dateColumn.setPrefWidth(100);
+		dateColumn.setPrefWidth(150);
 		scCountColumn.setPrefWidth(150);
 		exCountColumn.setPrefWidth(180);
 		trCountColumn.setPrefWidth(180);
@@ -545,7 +641,11 @@ public class ClientController implements Initializable {
 		
 		ParallelTransition parAnimation = new ParallelTransition();
 		try {
-			Launcher.getClient().executeCommand("show", new ReaderInputStream(new StringReader(""), StandardCharsets.UTF_8));
+			try {
+				Launcher.getClient().executeCommand("show", new ReaderInputStream(new StringReader(""), StandardCharsets.UTF_8), System.out);
+			} catch (CommandException e1) {
+				GUIUtils.showAndWaitError(e1);
+			}
 			Task<Void> loadBrowserTask = new Task<Void>() {
 				@Override
 				protected Void call() throws Exception {
@@ -556,7 +656,7 @@ public class ClientController implements Initializable {
 							String[] m = line.split(",");
 							String own = m[m.length - 1];
 							String b = line.replace("," + own, "");
-							if (line.contains("/-/"))
+							if (line.contains("/-/") || line.contains("****"))
 								break;
 							System.out.println("Owner: " + own);
 							System.out.println(b);
@@ -612,7 +712,6 @@ public class ClientController implements Initializable {
 		tabTable.setText(resource.getString("tab.table"));
 		tabAccount.setText(resource.getString("tab.account"));
 		
-		showButton.setText(resource.getString("button.show"));
 		if(!darkButton.isSelected()) {
     		darkButton.setText(resources.getString("button.enableDark"));
     	} else {
@@ -644,12 +743,33 @@ public class ClientController implements Initializable {
 		objectAdmPassText.setText(resource.getString("object.admpass"));
 		objectAdmLocNameText.setText(resource.getString("object.admlocname"));
 		
+		objectFilterIdText.setText(resource.getString("object.id"));
+		objectFilterNameText.setText(resource.getString("object.name"));
+		objectFilterOwnerText.setText(resource.getString("object.owner"));
+		objectFilterXText.setText(resource.getString("object.x"));
+		objectFilterYText.setText(resource.getString("object.y"));
+		objectFilterScText.setText(resource.getString("object.sc"));
+		objectFilterEsText.setText(resource.getString("object.es"));
+		objectFilterTsText.setText(resource.getString("object.ts"));
+		objectFilterFoEText.setText(resource.getString("object.foe"));
+		objectFilterDateText.setText(resource.getString("object.date"));
+		objectFilterAdmNameText.setText(resource.getString("object.admname"));
+		objectFilterAdmCountryText.setText(resource.getString("object.admcountry"));
+		objectFilterAdmEyeText.setText(resource.getString("object.admeye"));
+		objectFilterAdmHairText.setText(resource.getString("object.admhair"));
+		objectFilterAdmXText.setText(resource.getString("object.admx"));
+		objectFilterAdmYText.setText(resource.getString("object.admy"));
+		objectFilterAdmZText.setText(resource.getString("object.admz"));
+		objectFilterAdmPassText.setText(resource.getString("object.admpass"));
+		objectFilterAdmLocNameText.setText(resource.getString("object.admlocname"));
+		
 		langText.setText(resource.getString("text.lang"));
 		darkmodeText.setText(resource.getString("text.darkmode"));
 		
 		accountPane.setText(resource.getString("account.text"));
 		loginText.setText(resource.getString("account.login"));
 		passwordText.setText(resource.getString("account.password"));
+		outputText.setText(resource.getString("output"));
 		
 		setupTableLanguage(resource);
 	}
@@ -676,11 +796,6 @@ public class ClientController implements Initializable {
 	    adminCountryColumn.setText(resource.getString("column.admcountry"));
 	}
 	
-	private void clearInfo() {
-		objectId.clear();
-		objectName.clear();
-	}
-	
 	private void prepareTriggers() {
 		ParallelTransition parAnimation = new ParallelTransition();
 		PipedInputStream pin = Launcher.getClient().getDataInput();
@@ -692,8 +807,10 @@ public class ClientController implements Initializable {
 				@SuppressWarnings("resource")
 				Scanner sc = new Scanner(pin);
 				while (true) {
-					if (sc.hasNext()) {
+					if (sc.hasNextLine()) {
 						String line = sc.next();
+						if(line.equals("****"))
+							continue;
 						System.out.println(line);
 						String[] request = line.split(";");
 						if (request[0].equals("DELETE")) {
@@ -714,8 +831,13 @@ public class ClientController implements Initializable {
 							
 					        Circle locCircle = circle;
 							Platform.runLater(() -> {
-								infoPane.setDisable(true);
-								clearInfo();
+								if(selected.equals(Long.parseLong(request[1]))) {
+									infoPane.setDisable(true);
+									for (Circle c : objectsMap.values()) {
+										c.setStroke(Paint.valueOf("Black"));
+									}
+									clearObjectInfo();
+								}
 								deleteSt.play();
 								deleteSt.setOnFinished(e -> {
 									objectGroup.getChildren().remove(locCircle.getParent());
@@ -724,23 +846,77 @@ public class ClientController implements Initializable {
 								    StudyGroup data = obsList.get(idx);
 								    if (data.getId().equals(Long.parseLong(request[1]))) {
 								    	obsList.remove(idx);
-								       return;
+								    	objectsMap.remove(Long.parseLong(request[1]));
+								    	return;
 								    }
 								}
 							});
-						} else if(request[0].equals("INSERT")) {
+						} else if(request[0].equals("INSERT")) {								
 							String line2 = line.replace("INSERT;", "");
 							String[] m = line2.split(",");
 							String own = m[m.length - 1];
 							String b = line2.replace("," + own, "");
 							StudyGroup st = generateStydyGroup(b, own);
 							createObject(st, parAnimation);
+							obsList.add(st);
 						} else if(request[0].equals("UPDATE")) {
 							String line2 = line.replace("UPDATE;", "");
 							String[] m = line2.split(",");
 							String own = m[m.length - 1];
 							String b = line2.replace("," + own, "");
 							StudyGroup st = generateStydyGroup(b, own);
+							StudyGroup replace = obsList.stream().filter(g -> g.getId().equals(st.getId())).findAny().get();
+							if(selected.equals(st.getId())) {
+								updateObjectInfo(st);
+							}
+							obsList.remove(replace);
+							Circle cir = objectsMap.get(st.getId());
+							cir.getParent().setLayoutX(st.getCoordinates().getX());
+							cir.getParent().setLayoutY(st.getCoordinates().getY());
+							obsList.add(st);
+						} else if(request[0].equals("TRUNCATE")) {
+							
+							Iterator<Long> iter = objectsMap.keySet().iterator();
+							
+								while (iter.hasNext()) {
+									Long id = iter.next();
+									Circle circle = null;
+									while (circle == null)
+										circle = objectsMap.get(id);
+
+									ScaleTransition circleScale = new ScaleTransition(Duration.millis(2000), circle.getParent());
+									circleScale.setToX(0);
+									circleScale.setToY(0);
+									circleScale.setFromX(1);
+									circleScale.setFromY(1);
+									circleScale.setCycleCount(1);
+									circleScale.setAutoReverse(true);
+									SequentialTransition deleteSt = new SequentialTransition();
+									deleteSt.getChildren().addAll(circleScale);
+
+									Circle locCircle = circle;
+									Platform.runLater(() -> {
+										if (selected.equals(id)) {
+											infoPane.setDisable(true);
+											for (Circle c : objectsMap.values()) {
+												c.setStroke(Paint.valueOf("Black"));
+											}
+											clearObjectInfo();
+										}
+										deleteSt.play();
+										deleteSt.setOnFinished(e -> {
+											objectGroup.getChildren().remove(locCircle.getParent());
+										});
+										for (int idx = 0; idx < obsList.size(); idx++) {
+											StudyGroup data = obsList.get(idx);
+											if (data.getId().equals(id)) {
+												obsList.remove(idx);
+												return;
+											}
+										}
+									});
+								}
+								objectsMap.clear();
 						}
 					}
 				}
@@ -754,7 +930,7 @@ public class ClientController implements Initializable {
 		new Thread(triggersTask).start();
 	}
 	
-	public void createObject(StudyGroup studyGroup, ParallelTransition parAnimation) {
+	private void createObject(StudyGroup studyGroup, ParallelTransition parAnimation) {
 		Platform.runLater(() -> {
 			byte[] ownBytes = studyGroup.getOwner().getBytes();
 			long seed = 0;
@@ -783,12 +959,14 @@ public class ClientController implements Initializable {
 			circleScale.setToY(1);
 			circleScale.setCycleCount(1);
 			circleScale.setAutoReverse(true);
+			parAnimation.getChildren().clear();
 			parAnimation.getChildren().add(circleScale);
 
 			circle.setStroke(Paint.valueOf("Black"));
 			circle.setStrokeWidth(1.0);
 			circle.setOnMousePressed(event -> {
 				if(event.getButton().equals(MouseButton.PRIMARY)) {
+					selected = studyGroup.getId();
 		        	for (Circle c : objectsMap.values()) {
 						c.setStroke(Paint.valueOf("Black"));
 					}
@@ -830,6 +1008,301 @@ public class ClientController implements Initializable {
 			//objectTable.getItems().add(studyGroup);
 			objectsMap.put(studyGroup.getId(), circle);
 			parAnimation.play();
+		});
+	}
+	
+	private void clearObjectInfo() {
+		Platform.runLater(() -> {
+			objectId.clear();
+			objectName.clear();
+			objectOwner.clear();
+			objectX.clear();
+			objectY.clear();
+			objectSc.clear();
+			objectEs.clear();
+			objectTs.clear();
+			objectFoE.clear();
+			objectDate.clear();
+			objectAdmName.clear();
+			objectAdmCountry.clear();
+			objectAdmEye.clear();
+			objectAdmHair.clear();
+			objectAdmX.clear();
+			objectAdmY.clear();
+			objectAdmZ.clear();
+			objectAdmPass.clear();
+			objectAdmLocName.clear();
+		});
+	}
+	
+	private void updateObjectInfo(StudyGroup studyGroup) {
+		Platform.runLater(() -> {
+			objectId.setText(studyGroup.getId() + "");
+			objectName.setText(studyGroup.getName());
+			objectOwner.setText(studyGroup.getOwner());
+			objectX.setText(studyGroup.getCoordinates().getX() + "");
+			objectY.setText(studyGroup.getCoordinates().getY() + "");
+			objectSc.setText(studyGroup.getStudentsCount() + "");
+			objectEs.setText(studyGroup.getExpelledStudents() + "");
+			objectTs.setText(studyGroup.getTransferredStudents() + "");
+			objectFoE.setText(studyGroup.getFormOfEducation().toString());
+			objectDate.setText(studyGroup.getCreationLocalDate().toString());
+			if(studyGroup.getGroupAdmin() != null) {
+				objectAdminBox.setVisible(true);
+				objectAdmName.setText(studyGroup.getGroupAdmin().getName());
+				objectAdmCountry.setText(studyGroup.getGroupAdmin().getNationality() + "");
+				objectAdmEye.setText(studyGroup.getGroupAdmin().getEyeColor() + "");
+				objectAdmHair.setText(studyGroup.getGroupAdmin().getHairColor() + "");
+				objectAdmX.setText(studyGroup.getGroupAdmin().getLocation().getX() + "");
+				objectAdmY.setText(studyGroup.getGroupAdmin().getLocation().getY() + "");
+				objectAdmZ.setText(studyGroup.getGroupAdmin().getLocation().getZ() + "");
+				objectAdmPass.setText(studyGroup.getGroupAdmin().getPassportID());
+				objectAdmLocName.setText(studyGroup.getGroupAdmin().getLocation().getName() + "");
+			} else {
+				objectAdminBox.setVisible(false);
+			}
+		});
+	}
+	
+	private Task<Void> getOutputTask() {
+		return new Task<Void>() {
+			@Override
+			protected Void call() throws Exception {
+				Scanner sc = new Scanner(Launcher.getClient().getAnswerInput());
+				while (sc.hasNextLine()) {
+					String f = sc.nextLine();
+					if(f.equals("****"))
+						break;
+					Platform.runLater(() -> {
+						outputField.appendText(f + "\n");
+					});
+				}
+				return null;
+			}
+		};
+	}
+	
+	private void setDefaultCommandsButton(Button but, String com) {
+		but.setOnMouseClicked(e -> {
+        	
+        	commandsGridPane.getChildren().stream().forEach(b -> b.setDisable(true));
+        	
+        	Task<Void> comTask = new Task<Void>() {
+				@Override
+				protected Void call() throws Exception {
+					Launcher.getClient().executeCommand(com, new ReaderInputStream(new StringReader(""), StandardCharsets.UTF_8), System.out);
+					return null;
+				}
+			};
+			
+			new Thread(comTask).start();
+			
+			comTask.setOnSucceeded(e1 -> {
+				Task<Void> outputTask = getOutputTask();
+				new Thread(outputTask).start();
+				outputTask.setOnSucceeded(t -> {
+					commandsGridPane.getChildren().stream().forEach(b -> b.setDisable(false));
+				});
+			});
+			comTask.setOnFailed(e1 -> {
+				Platform.runLater(() -> {
+					outputField.appendText(Launcher.getClient().getLastError() + "\n");
+				});
+				commandsGridPane.getChildren().stream().forEach(b -> b.setDisable(false));
+			});
+        });
+	}
+	
+	private void setArgsCommandsButton(Button but, String com) {
+		
+		but.setOnMouseClicked(e -> {
+
+			String res = "";
+			TextInputDialog dialog = new TextInputDialog();
+			dialog.initOwner(Launcher.getStage());
+	        dialog.setTitle(resources.getString("argument"));
+	        dialog.setHeaderText(resources.getString("argument.enter"));
+
+	        java.util.Optional<String> result = dialog.showAndWait();
+	        if (result.isPresent()) {
+	            res = result.get();
+	        } else {
+	        	return;
+	        }
+			
+			commandsGridPane.getChildren().stream().forEach(b -> b.setDisable(true));
+
+			String locRes = res;
+			Task<Void> commandTask = new Task<Void>() {
+				@Override
+				protected Void call() throws Exception {
+					Launcher.getClient().executeCommand(com + " " + locRes, new ReaderInputStream(new StringReader(""), StandardCharsets.UTF_8), System.out);
+					return null;
+				}
+			};
+
+			new Thread(commandTask).start();
+
+			commandTask.setOnSucceeded(e1 -> {
+				Task<Void> outputTask = getOutputTask();
+				new Thread(outputTask).start();
+				outputTask.setOnSucceeded(t -> {
+					commandsGridPane.getChildren().stream().forEach(b -> b.setDisable(false));
+				});
+			});
+			commandTask.setOnFailed(e1 -> {
+				Platform.runLater(() -> {
+					outputField.appendText(Launcher.getClient().getLastError() + "\n");
+				});
+				commandsGridPane.getChildren().stream().forEach(b -> b.setDisable(false));
+			});
+		});
+	}
+	
+	private void setWarningCommandButton(Button but, String com) {
+		but.setOnMouseClicked(e -> {
+
+			String res = "";
+			Alert alert = new Alert(AlertType.WARNING, resources.getString("clear.text"), ButtonType.YES, ButtonType.NO);
+			alert.setTitle(resources.getString("clear"));
+			alert.initOwner(Launcher.getStage());
+			alert.showAndWait();
+
+			if (alert.getResult() == ButtonType.YES) {
+
+				commandsGridPane.getChildren().stream().forEach(b -> b.setDisable(true));
+
+				Task<Void> commandTask = new Task<Void>() {
+					@Override
+					protected Void call() throws Exception {
+						Launcher.getClient().executeCommand(com, new ReaderInputStream(new StringReader(""), StandardCharsets.UTF_8), System.out);
+						return null;
+					}
+				};
+
+				new Thread(commandTask).start();
+
+				commandTask.setOnSucceeded(e1 -> {
+					Task<Void> outputTask = getOutputTask();
+					new Thread(outputTask).start();
+					outputTask.setOnSucceeded(t -> {
+						commandsGridPane.getChildren().stream().forEach(b -> b.setDisable(false));
+					});
+				});
+				commandTask.setOnFailed(e1 -> {
+					Platform.runLater(() -> {
+						outputField.appendText(Launcher.getClient().getLastError() + "\n");
+					});
+					commandsGridPane.getChildren().stream().forEach(b -> b.setDisable(false));
+				});
+			}
+		});
+		
+	}
+	
+	private void setExecuteCommandButton() {
+		executeButton.setOnMouseClicked(e -> {
+
+			FileChooser fileChooser = new FileChooser();
+			File selectedFile = fileChooser.showOpenDialog(Launcher.getStage());
+
+			if (selectedFile != null) {
+
+				commandsGridPane.getChildren().stream().forEach(b -> b.setDisable(true));
+
+				Task<Void> commandTask = new Task<Void>() {
+					@Override
+					protected Void call() throws Exception {
+						System.out.println("execute_script " + selectedFile.getAbsolutePath());
+						Launcher.getClient().executeCommand("execute_script " + selectedFile.getAbsolutePath(), new ReaderInputStream(new StringReader(""), StandardCharsets.UTF_8), System.out);
+						return null;
+					}
+				};
+
+				new Thread(commandTask).start();
+
+				commandTask.setOnSucceeded(e1 -> {
+					Task<Void> outputTask = getOutputTask();
+					new Thread(outputTask).start();
+					outputTask.setOnSucceeded(t -> {
+						commandsGridPane.getChildren().stream().forEach(b -> b.setDisable(false));
+					});
+				});
+				commandTask.setOnFailed(e1 -> {
+					Platform.runLater(() -> {
+						outputField.appendText(Launcher.getClient().getLastError() + "\n");
+					});
+					commandsGridPane.getChildren().stream().forEach(b -> b.setDisable(false));
+				});
+			}
+		});
+	}
+	
+	private void setAddCommandButton(Button but, String com) {
+		but.setOnMouseClicked(e -> {
+
+			String[] lang = {"object.name", "object.x", "object.y", "object.sc",
+					"object.es", "object.ts", "object.foe", "argument.admin", 
+					"object.admname", "object.admpass", "object.admeye", "object.admhair",
+					"object.admcountry", "object.admlocname", "object.admx", "object.admy", "object.admz"};
+			String res = "";
+			for(int i = 0; i < 17; i++) {
+				TextInputDialog dialog = new TextInputDialog();
+				dialog.initOwner(Launcher.getStage());
+		        dialog.setTitle(resources.getString("argument") + " " + i);
+		        dialog.setHeaderText(resources.getString(lang[i]));
+	
+		        java.util.Optional<String> result = dialog.showAndWait();
+		        if (result.isPresent()) {
+		        	String s = result.get();
+					if (i == 7 && s.equals("NO")) {
+						res = res + s + "\n";
+						break;
+					}
+		            res = res + s + "\n";
+		        } else {
+		        	return;
+		        }
+			}
+			
+			commandsGridPane.getChildren().stream().forEach(b -> b.setDisable(true));
+
+			String locRes = res;
+			Task<Void> commandTask = new Task<Void>() {
+				@Override
+				protected Void call() throws Exception {
+					Launcher.getClient().executeCommand(com, new ReaderInputStream(new StringReader(locRes), StandardCharsets.UTF_8), 
+							new PrintStream(new GUIUtils.StreamCapturer(new GUIUtils.Consumer() {
+								@Override
+								public void appendText(String text) {
+									Platform.runLater(new Runnable() {
+										@Override
+										public void run() {
+											outputField.appendText(text);
+											//textArea.appendText(text);
+										}
+									});
+								}
+							}, System.out)));
+					return null;
+				}
+			};
+
+			new Thread(commandTask).start();
+
+			commandTask.setOnSucceeded(e1 -> {
+				Task<Void> outputTask = getOutputTask();
+				new Thread(outputTask).start();
+				outputTask.setOnSucceeded(t -> {
+					commandsGridPane.getChildren().stream().forEach(b -> b.setDisable(false));
+				});
+			});
+			commandTask.setOnFailed(e1 -> {
+				Platform.runLater(() -> {
+					outputField.appendText(Launcher.getClient().getLastError() + "\n");
+				});
+				commandsGridPane.getChildren().stream().forEach(b -> b.setDisable(false));
+			});
 		});
 	}
 }
