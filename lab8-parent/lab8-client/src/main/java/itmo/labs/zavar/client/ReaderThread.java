@@ -45,7 +45,7 @@ public class ReaderThread implements Runnable{
 				for (int i = 0; i < bytesRead; i++) {
 					b[i] = buf.get();
 				}
-				ByteArrayInputStream stream2 = new ByteArrayInputStream(b);//Base64.getMimeDecoder().decode(b));
+				ByteArrayInputStream stream2 = new ByteArrayInputStream(b);
 				ObjectInputStream obj = new ObjectInputStream(stream2);
 				CommandAnswer per = (CommandAnswer) obj.readObject();
 				if (per.getAnswer().contains("true")) {
@@ -53,18 +53,12 @@ public class ReaderThread implements Runnable{
 					ansOut.println("loginDone");
 					isLogin = true;
 				} else {
-					//System.out.println(per.getAnswer());
 					ans = per.getAnswer();
 					ansOut.println(ans);
 					ansOut.println("****");
 					if(per.getData().length != 0) {
 						data = ((String)per.getData()[0]);
 						dataOut.println(data);
-						//String[] res = ((String)per.getData()[0]).split(";");
-						/*for(int i = 0; i < res.length; i++) {
-							//System.out.println(res[i]);
-							data = data + res[i];
-						}*/
 					}
 				}
 				buf.flip();
@@ -73,7 +67,6 @@ public class ReaderThread implements Runnable{
 			} catch (SocketException | NegativeArraySizeException e) {
 				isConnected = false;
 				check.set(false);
-				//e.printStackTrace();
 				break;
 			} catch (Exception e) {
 				e.printStackTrace();

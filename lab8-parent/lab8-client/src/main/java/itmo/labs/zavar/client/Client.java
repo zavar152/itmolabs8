@@ -98,7 +98,7 @@ public class Client {
 	}
 	
 	public SimpleBooleanProperty getConnectedProperty() {
-		return rdThread.getConnectedProperty();
+		return ReaderThread.getConnectedProperty();
 	}
 	
 	public PipedInputStream getDataInput() {
@@ -126,7 +126,6 @@ public class Client {
 	}
 	
 	public void shutdown() throws IOException {
-		//getConnectedProperty().
 		if(socket != null && !socket.isClosed()) {
 			socket.close();
 		}
@@ -216,13 +215,6 @@ public class Client {
 							login = (String) c.getArgs()[0];
 							password = (String) c.getArgs()[1];
 						}
-						/*
-						 * while(!rdThread.isReadyAns());
-						 * 
-						 * //System.out.println("lol"); System.out.println(rdThread.getAnswer());
-						 * 
-						 * rdThread.resetReadyAns();
-						 */
 						commandState = CommandState.DONE;
 					}
 				} catch (CommandException e) {

@@ -8,7 +8,6 @@ import java.io.StringReader;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.text.NumberFormat;
-import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -149,7 +148,7 @@ public class ClientController implements Initializable {
 	private TableColumn<StudyGroup, String> nameColumn = new TableColumn<>("%column.nameColumn");
 	private TableColumn<StudyGroup, Double> coordXColumn = new TableColumn<>("%column.coordX");
 	private TableColumn<StudyGroup, Float> coordYColumn = new TableColumn<>("%column.coordY");
-	private TableColumn<StudyGroup, LocalDate> dateColumn = new TableColumn<>("%column.date");
+	private TableColumn<StudyGroup, String> dateColumn = new TableColumn<>("%column.date");
 	private TableColumn<StudyGroup, Long> scCountColumn = new TableColumn<>("%column.scCount");
 	private TableColumn<StudyGroup, Integer> exCountColumn = new TableColumn<>("%column.exCount");
 	private TableColumn<StudyGroup, Long> trCountColumn = new TableColumn<>("%column.trCount");
@@ -167,6 +166,7 @@ public class ClientController implements Initializable {
 	@SuppressWarnings("unused")
 	private boolean isTriggersDone = false;
 	private Long selected = -1L;
+	@SuppressWarnings("unused")
 	private NumberFormat numberFormat;
 	private DateTimeFormatter dateFormat;
 	
@@ -534,7 +534,7 @@ public class ClientController implements Initializable {
 	    nameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
 	    coordXColumn.setCellValueFactory(data -> new ReadOnlyObjectWrapper<Double>(data.getValue().getCoordinates().getX()));
 	    coordYColumn.setCellValueFactory(data -> new ReadOnlyObjectWrapper<Float>(data.getValue().getCoordinates().getY()));
-	    dateColumn.setCellValueFactory(data -> new ReadOnlyObjectWrapper<LocalDate>(data.getValue().getCreationLocalDate()));
+	    dateColumn.setCellValueFactory(data -> new ReadOnlyObjectWrapper<String>(data.getValue().getCreationLocalDate().format(dateFormat)));
 	    scCountColumn.setCellValueFactory(data -> new ReadOnlyObjectWrapper<Long>(data.getValue().getStudentsCount()));
 	    exCountColumn.setCellValueFactory(data -> new ReadOnlyObjectWrapper<Integer>(data.getValue().getExpelledStudents()));
 	    trCountColumn.setCellValueFactory(data -> new ReadOnlyObjectWrapper<Long>(data.getValue().getTransferredStudents()));
@@ -671,7 +671,7 @@ public class ClientController implements Initializable {
 							public boolean test(StudyGroup t) {
 								return new String(t.getId() + "").contains(objectFilterId.getText()) && t.getName().contains(objectFilterName.getText()) && t.getOwner().contains(objectFilterOwner.getText()) 
 										&& new String(t.getCoordinates().getX() + "").contains(objectFilterX.getText()) && new String(t.getCoordinates().getY() + "").contains(objectFilterY.getText())
-										&& t.getCreationLocalDate().toString().contains(objectFilterDate.getText()) && new String(t.getStudentsCount() + "").contains(objectFilterSc.getText())
+										&& t.getCreationLocalDate().format(dateFormat).contains(objectFilterDate.getText()) && new String(t.getStudentsCount() + "").contains(objectFilterSc.getText())
 										&& new String(t.getExpelledStudents() + "").contains(objectFilterEs.getText()) && new String(t.getTransferredStudents() + "").contains(objectFilterTs.getText())
 										&& new String(t.getFormOfEducation() + "").contains(objectFilterFoE.getText()) && (t.getGroupAdmin() == null ? true : (
 												t.getGroupAdmin().getName().contains(objectFilterAdmName.getText()) && t.getGroupAdmin().getPassportID().contains(objectFilterAdmPass.getText()) 
@@ -706,6 +706,37 @@ public class ClientController implements Initializable {
 	}
 	
 	private void setupLanguage(ResourceBundle resource) {
+		
+		objectTable.getColumns().clear();
+		dateColumn = new TableColumn<>("%column.date");
+		dateColumn.setCellValueFactory(data -> new ReadOnlyObjectWrapper<String>(data.getValue().getCreationLocalDate().format(dateFormat)));
+	    objectTable.getColumns().add(idColumn);
+	    objectTable.getColumns().add(ownerColumn);
+	    objectTable.getColumns().add(nameColumn);
+	    objectTable.getColumns().add(coordXColumn);
+	    objectTable.getColumns().add(coordYColumn);
+	    objectTable.getColumns().add(dateColumn);
+	    objectTable.getColumns().add(scCountColumn);
+	    objectTable.getColumns().add(exCountColumn);
+	    objectTable.getColumns().add(trCountColumn);
+	    objectTable.getColumns().add(formColumn);
+	    
+	    objectTable.getColumns().add(adminNameColumn);
+	    objectTable.getColumns().add(adminPassColumn);
+	    objectTable.getColumns().add(adminEyeColumn);
+	    objectTable.getColumns().add(adminHairColumn);
+	    objectTable.getColumns().add(adminCountryColumn);
+	    objectTable.getColumns().add(adminXColumn);
+	    objectTable.getColumns().add(adminYColumn);
+	    objectTable.getColumns().add(adminZColumn);
+	    objectTable.getColumns().add(adminLocNameColumn);
+		
+		if(selected != -1L)
+		{
+			Circle c = objectsMap.get(selected);
+        	c.fireEvent(new MouseEvent(MouseEvent.MOUSE_PRESSED, c.getCenterX(), c.getCenterY(), c.getCenterX(), c.getCenterY(), MouseButton.PRIMARY, 1, true, true, true, true, true, true, true, true, true, true, null));
+		}
+		
 		tabBrowser.setText(resource.getString("tab.browser"));
 		tabCommands.setText(resource.getString("tab.commands"));
 		tabSettings.setText(resource.getString("tab.settings"));
@@ -981,7 +1012,7 @@ public class ClientController implements Initializable {
 					objectEs.setText(studyGroup.getExpelledStudents() + "");
 					objectTs.setText(studyGroup.getTransferredStudents() + "");
 					objectFoE.setText(studyGroup.getFormOfEducation().toString());
-					objectDate.setText(studyGroup.getCreationLocalDate().toString());
+					objectDate.setText(studyGroup.getCreationLocalDate().format(dateFormat));
 					if(studyGroup.getGroupAdmin() != null) {
 						objectAdminBox.setVisible(true);
 						objectAdmName.setText(studyGroup.getGroupAdmin().getName());
@@ -1005,7 +1036,6 @@ public class ClientController implements Initializable {
 			});
 			circle.cursorProperty().set(Cursor.DEFAULT);
 			objectGroup.getChildren().add(stackObject);
-			//objectTable.getItems().add(studyGroup);
 			objectsMap.put(studyGroup.getId(), circle);
 			parAnimation.play();
 		});
@@ -1066,6 +1096,7 @@ public class ClientController implements Initializable {
 	
 	private Task<Void> getOutputTask() {
 		return new Task<Void>() {
+			@SuppressWarnings("resource")
 			@Override
 			protected Void call() throws Exception {
 				Scanner sc = new Scanner(Launcher.getClient().getAnswerInput());
@@ -1162,7 +1193,6 @@ public class ClientController implements Initializable {
 	private void setWarningCommandButton(Button but, String com) {
 		but.setOnMouseClicked(e -> {
 
-			String res = "";
 			Alert alert = new Alert(AlertType.WARNING, resources.getString("clear.text"), ButtonType.YES, ButtonType.NO);
 			alert.setTitle(resources.getString("clear"));
 			alert.initOwner(Launcher.getStage());
@@ -1279,7 +1309,6 @@ public class ClientController implements Initializable {
 										@Override
 										public void run() {
 											outputField.appendText(text);
-											//textArea.appendText(text);
 										}
 									});
 								}

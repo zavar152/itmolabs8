@@ -21,86 +21,79 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Priority;
 
 public class GUIUtils {
-    
+
 	public static class UTF8Control extends ResourceBundle.Control {
-	    public ResourceBundle newBundle (String baseName, Locale locale, String format, ClassLoader loader, boolean reload) throws IllegalAccessException, InstantiationException, IOException
-	    {
-	        // The below is a copy of the default implementation.
-	        String bundleName = toBundleName(baseName, locale);
-	        String resourceName = toResourceName(bundleName, "properties");
-	        ResourceBundle bundle = null;
-	        InputStream stream = null;
-	        if (reload) {
-	            URL url = loader.getResource(resourceName);
-	            if (url != null) {
-	                URLConnection connection = url.openConnection();
-	                if (connection != null) {
-	                    connection.setUseCaches(false);
-	                    stream = connection.getInputStream();
-	                }
-	            }
-	        } else {
-	            stream = loader.getResourceAsStream(resourceName);
-	        }
-	        if (stream != null) {
-	            try {
-	                // Only this line is changed to make it to read properties files as UTF-8.
-	                bundle = new PropertyResourceBundle(new InputStreamReader(stream, "UTF-8"));
-	            } finally {
-	                stream.close();
-	            }
-	        }
-	        return bundle;
-	    }
+		public ResourceBundle newBundle(String baseName, Locale locale, String format, ClassLoader loader,
+				boolean reload) throws IllegalAccessException, InstantiationException, IOException {
+			String bundleName = toBundleName(baseName, locale);
+			String resourceName = toResourceName(bundleName, "properties");
+			ResourceBundle bundle = null;
+			InputStream stream = null;
+			if (reload) {
+				URL url = loader.getResource(resourceName);
+				if (url != null) {
+					URLConnection connection = url.openConnection();
+					if (connection != null) {
+						connection.setUseCaches(false);
+						stream = connection.getInputStream();
+					}
+				}
+			} else {
+				stream = loader.getResourceAsStream(resourceName);
+			}
+			if (stream != null) {
+				try {
+					bundle = new PropertyResourceBundle(new InputStreamReader(stream, "UTF-8"));
+				} finally {
+					stream.close();
+				}
+			}
+			return bundle;
+		}
 	}
-	
-	public interface Consumer 
-    {
-        public void appendText(String text);
-    }
-	
-	public static class StreamCapturer extends OutputStream 
-	{
+
+	public interface Consumer {
+		public void appendText(String text);
+	}
+
+	public static class StreamCapturer extends OutputStream {
 		private StringBuilder buffer;
 		private Consumer consumer;
 		private PrintStream old;
 
-		public StreamCapturer(Consumer consumer, PrintStream old) 
-		{
+		public StreamCapturer(Consumer consumer, PrintStream old) {
 			buffer = new StringBuilder(128);
 			this.old = old;
 			this.consumer = consumer;
 		}
 
 		@Override
-		public void write(int b) throws IOException 
-		{
+		public void write(int b) throws IOException {
 			char c = (char) b;
 			String value = Character.toString(c);
 			buffer.append(value);
-			if(value.equals("\n")) 
-			{
+			if (value.equals("\n")) {
 				consumer.appendText(buffer.toString());
 				buffer.delete(0, buffer.length());
 			}
 			old.print(c);
 		}
 	}
-	
-    public static void showAndWaitError(String text) {
+
+	public static void showAndWaitError(String text) {
 		Alert alert = new Alert(AlertType.ERROR, text);
 		alert.setTitle("Lab8 Client Error");
 		alert.initOwner(Launcher.getStage());
 		alert.showAndWait();
 	}
 
-    public static void showError(String text) {
+	public static void showError(String text) {
 		Alert alert = new Alert(AlertType.ERROR, text);
 		alert.setTitle("Lab8 Client Error");
 		alert.initOwner(Launcher.getStage());
 		alert.show();
 	}
-    
+
 	public static void showAndWaitError(Exception e, String... text) {
 		Alert alert = new Alert(AlertType.ERROR);
 		alert.setTitle("Lab8 Client Error");

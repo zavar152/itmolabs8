@@ -93,7 +93,7 @@
                                                                         <Font name="System Bold" size="14.0" />
                                                                      </font>
                                                                   </Label>
-                                                                  <TextField fx:id="objectDate" prefWidth="149.0" />
+                                                                  <TextField fx:id="objectDate" editable="false" prefWidth="149.0" />
                                                                   <Label fx:id="objectScText" text="%object.sc">
                                                                      <font>
                                                                         <Font name="System Bold" size="14.0" />
