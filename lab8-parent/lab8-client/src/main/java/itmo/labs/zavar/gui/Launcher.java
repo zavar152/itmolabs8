@@ -6,16 +6,14 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Locale;
 import java.util.MissingResourceException;
 import java.util.Properties;
 import java.util.ResourceBundle;
-import java.util.stream.Stream;
 
 import itmo.labs.zavar.client.Client;
 import itmo.labs.zavar.client.util.ClientState;
@@ -102,14 +100,19 @@ public class Launcher extends Application{
 		
 		Iterator<Object> keys = langsFile.keySet().iterator();
 		
+		ArrayList<String> find = new ArrayList<String>();
 		while(keys.hasNext()) {
-			String name = langsFile.getProperty((String) keys.next());
-			String locale = langsFile.getProperty((String) keys.next());
-			langs.put(name, locale);
-			invLangs.put(locale, name);
+			String s = (String) keys.next();
+			if(!s.contains("locale")) {
+				find.add(s);
+				String name = langsFile.getProperty(s);
+				String locale = langsFile.getProperty(s.replace(".name", ".locale"));
+				langs.put(name, locale);
+				invLangs.put(locale, name);
+			}
 		}
 		
-		try (Stream<Path> paths = Files.walk(Paths.get(getClass().getResource("/langs").toURI()))) {
+		/*try (Stream<Path> paths = Files.walk(Paths.get(getClass().getResource("/langs").toURI()))) {
 		    paths.filter(Files::isRegularFile).forEach(e -> {
 		    	if(!e.getFileName().toString().equals("langs.properties")) {
 		    		String loc = e.getFileName().toString().replaceAll("lang_", "").replaceAll(".properties", "");
@@ -121,7 +124,7 @@ public class Launcher extends Application{
 		    		}
 		    	}
 		    });
-		}
+		}*/
 		
         Platform.runLater(() -> {
     		splashStage = new Stage();

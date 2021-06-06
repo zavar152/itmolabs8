@@ -37,7 +37,7 @@
 					<archive>
 						<manifest>
 							<addClasspath>true</addClasspath>
-							<mainClass>itmo.labs.zavar.client.Client</mainClass>
+							<mainClass>itmo.labs.zavar.gui.Launcher</mainClass>
 						</manifest>
 					</archive>
 					<descriptorRefs>
